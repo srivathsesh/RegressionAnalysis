@@ -3,7 +3,8 @@ title: 'Assignment 1: Getting know your Data'
 author: "Sri Seshadri"
 date: "6/22/2017"
 output:
-  pdf_document: default
+  pdf_document: 
+    fig_caption: yes
   html_document: default
   word_document: default
 ---
@@ -86,5 +87,50 @@ From the Ames, Iowa housing dataset's dictionary (see Apendix) and based on some
 knitr::kable(sanitycheck, caption = "Data sanity check for numeric variables") 
 knitr::kable(Counts, caption = "Data sanity check for nominal variables",align = c("l","r","r","r")) 
 ```
-## Initial Exploratory Data Analysis
+
+## Initial Exploratory Data Analysis (EDA)
+
+For ease of performing exploratory data analysis using the R software, a unique identification number for each row is added as a variable to the dataset. The year sold (YrSold) and month sold (MoSold) are combined into one variable as yrmonth for example January 2001 is coded as 2001.01. The data is then arranged in chronological order by "Neigborhood". The sales proce of properties are right skewed as seen in Figure 1. It is hypothesized that values in some neighborhoods are higher relative to others.
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE, out.width=c('250px','200px'),fig.show='hold',fig.cap="Control Chart and Histogram"}
+# Add attribute columns for exploring purposes
+SampleFrame<- SampleFrame %>% 
+  mutate(ID = 1:nrow(SampleFrame)) %>% 
+  mutate(yrmonth = YrSold + MoSold/100) %>% 
+  mutate(logSalePrice = log10(SalePrice)) %>% 
+  arrange(Neighborhood,yrmonth)
+
+# Explore time series
+#source('Multiplot.R')
+library(qicharts)
+library(ggplot2)
+
+controlchart <- qic(data = SampleFrame, y = SalePrice, x = ID, chart = "i", xlab = "ID", ylab = "SalePrice")
+ggplot(SampleFrame) + geom_histogram(mapping = aes(x = SalePrice),binwidth = 10000)+theme_bw() + ggtitle("Histogram SalesPrice")
+
+```
+\pagebreak
+
+
+It is evident from Figure 2 that the sale price that were above the upper control limit on the control chart were more from Stone Brook, Northridge Heights and Northridge than the rest of the neighborhoods. Also it is seen that the some neighborhoods have more sales than others (Figure 3). They may be either new housing developments or likey to have a floating population.  \newline  
+\newline  
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE, fig.cap="Boxplot of Sales by Neighborhood",fig.height= 3}
+ggplot(data = SampleFrame,mapping = aes(x = Neighborhood, y = SalePrice, color = Neighborhood)) + geom_boxplot(orientation = 'h') + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + coord_flip() +  theme_classic() + theme(legend.position = "none") + geom_hline(yintercept = 300000)
+```
+
+
+
+```{r, fig.cap="Frequency of Sales by Neighborhood", fig.height= 3}
+ggplot(data = SampleFrame) + geom_bar(mapping = aes(x = Neighborhood, fill = Neighborhood)) + coord_flip() + theme_bw() + theme(legend.position = "none")
+```
+
+\pagebreak
+
+The sale condition has a pronounced effect on the sale price (see Figure 4). It is seen that homes that were not fully completed when last assessed were expensive. This could mean that they were newly constructed homes that were priced higher than the older ones. This leads us to hypothesize that year built or remodelled would have similar effect on the sales price. Also it would be interesting to see if new constructions are from a specific neighborhood and how do they compare with mature neighborhoods, which we'll explore in the next section.  \newline
+
+ 
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Frequency of Sales by Sale condition", fig.height= 3}
+ggplot(data = SampleFrame,mapping = aes(x = SaleCondition, y = SalePrice, color = SaleCondition)) + geom_boxplot(orientation = 'h') + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + coord_flip() +  theme_classic() + theme(legend.position = "none")
+```
 
