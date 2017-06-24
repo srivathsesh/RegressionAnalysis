@@ -1,0 +1,90 @@
+---
+title: 'Assignment 1: Getting know your Data'
+author: "Sri Seshadri"
+date: "6/22/2017"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
+# chamge from scientic notations, to restore to default options(scipen = 0)
+options(scipen = 999)
+```
+
+## Introduction
+
+This report discusses the Ames, Iowa housing data set, its quality and observations from Exploratory Data Analysis (EDA). EDA was used to identify potential predictor variables that can be used for predicting value of a "typical" home. 
+
+## Sample Definition
+
+It is assumed that typical home buyers are those that move from apartments to single family or town homes. Also apartments are less likely to be sold to individuals as they remain holdings of owners for rental income. Single family and town homes belong to "Residential Low density" (RL) zoning classification in the city of Ames. Data belonging to only to the RL zone is considered for this analysis. There are a total of `r nrow(ames)` data points, out of which the rows belonging to the following zoning classifications are not sampled. The sampled data however has few two-family conversion and duplex houses, which are not removed from the sample at this time. 
+
+```{r, warning=FALSE,message=FALSE}
+library(magrittr)
+waterfall <- ames %>%
+  dplyr::filter(Zoning != 'RL') %>% 
+  dplyr::group_by(Zoning) %>%
+  dplyr::summarise(counts = n())
+
+# Print waterfall table
+knitr::kable(waterfall, align = c("l", "r"),caption = "Drop waterfall")
+
+# sample population
+SampledPop <- dplyr::filter(ames,Zoning == 'RL')
+# define variables of interest from the data
+colsofinterest <- c('LotArea'
+, 'LotConfig'
+, 'Neighborhood'
+, 'HouseStyle'
+, 'OverallCond'
+, 'YearRemodel'
+, 'TotalBsmtSF'
+, 'GrLivArea'
+, 'BsmtFullBath'
+, 'BsmtHalfBath'
+, 'FullBath'
+, 'HalfBath'
+, 'BedroomAbvGr'
+, 'KitchenQual'
+, 'TotRmsAbvGrd'
+, 'GarageCars'
+, 'MoSold'
+, 'YrSold'
+, 'SaleCondition'
+, 'SalePrice')
+library(dplyr)
+SampleFrame <- SampledPop %>% select_(.dots = colsofinterest)
+
+library(mosaic)
+# populate table with statistics
+sanitycheck <- do.call(rbind,dfapply(SampleFrame,favstats, select = is.numeric))
+# format numbers in the table for mean and sd
+sanitycheck$mean <- as.numeric(format(sanitycheck$mean , digits = 1, nsmall = 2))
+sanitycheck$sd <- as.numeric(format(sanitycheck$sd , digits = 1, nsmall = 2))
+# subset character columns from sanitycheck
+sanitycheckcharacter <- dplyr::select(SampleFrame, colnames(SampleFrame[1,sapply(SampleFrame,class) == 'character']))
+
+
+library(purrr)
+UniqueVals <- sanitycheckcharacter %>% 
+  map(unique)
+#s <- data.frame(names(tst),sapply(tst,function(x){paste(x,collapse = ",")}),row.names = NULL)
+Counts <- data.frame(sapply(UniqueVals,length),do.call(rbind,dfapply(sanitycheckcharacter,length,select = is.character)),do.call(rbind,dfapply(sanitycheckcharacter,n_missing,select = is.character)),row.names = names(UniqueVals))
+colnames(Counts) <- c( "# Unique", "n","missing")
+```
+
+## Data cleaning and Sanity check
+
+From the Ames, Iowa housing dataset's dictionary (see Apendix) and based on some preliminary EDA the variables listed in Table 2 and Table 3 were chosen to be important for furhter analysis. The dataset is fairy clean and there are `r sum(sum(sanitycheck$missing),sum(Counts$missing)) ` points that are missing. Table 2 shows the summary statisics of the numeric variables and it is noted that statistics are within reasonable bounds and appear to be in the units of measure as described in the data dictionary. 
+  Table 3 shows the chosen categorical (Nominal) variables and their unique number of values, sample sixe (n) and count of missing data. 4 of the 26 neighborhood are not in the sample frame chosen.  
+
+```{r pressure, echo=FALSE}
+knitr::kable(sanitycheck, caption = "Data sanity check for numeric variables") 
+knitr::kable(Counts, caption = "Data sanity check for nominal variables",align = c("l","r","r","r")) 
+```
+## Initial Exploratory Data Analysis
+

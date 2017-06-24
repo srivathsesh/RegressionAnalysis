@@ -1,0 +1,6 @@
+"","Variable","Unique Values"
+"1","LotConfig","Corner,Inside,CulDSac,FR2,FR3"
+"2","Neighborhood","NAmes,Gilbert,StoneBr,NWAmes,NPkVill,NridgHt,Blmngtn,NoRidge,Somerst,SawyerW,Sawyer,Greens,BrkSide,OldTown,ClearCr,SWISU,Edwards,CollgCr,Crawfor,Mitchel,Timber,Veenker"
+"3","HouseStyle","1Story,2Story,1.5Fin,SFoyer,SLvl,2.5Unf,1.5Unf,2.5Fin"
+"4","KitchenQual","TA,Gd,Ex,Fa,Po"
+"5","SaleCondition","Normal,Partial,Family,Abnorml,Alloca,AdjLand"
