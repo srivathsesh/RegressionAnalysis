@@ -130,7 +130,31 @@ ggplot(data = SampleFrame) + geom_bar(mapping = aes(x = Neighborhood, fill = Nei
 The sale condition has a pronounced effect on the sale price (see Figure 4). It is seen that homes that were not fully completed when last assessed were expensive. This could mean that they were newly constructed homes that were priced higher than the older ones. This leads us to hypothesize that year built or remodelled would have similar effect on the sales price. Also it would be interesting to see if new constructions are from a specific neighborhood and how do they compare with mature neighborhoods, which we'll explore in the next section.  \newline
 
  
-```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Frequency of Sales by Sale condition", fig.height= 3}
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap= "Sales by Sale condition", fig.height= 3}
 ggplot(data = SampleFrame,mapping = aes(x = SaleCondition, y = SalePrice, color = SaleCondition)) + geom_boxplot(orientation = 'h') + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + coord_flip() +  theme_classic() + theme(legend.position = "none")
 ```
+
+  
+  Homes with excellent kitchen quality have on an average higher sale price, as seen in Figure 5.  
+  
+  
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price by kitchen quality assesment", fig.height= 3}
+ggplot(data = SampleFrame,mapping = aes(x = KitchenQual, y = SalePrice, color = KitchenQual)) + geom_boxplot(orientation = 'h') + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + coord_flip() +  theme_classic() + theme(legend.position = "none")
+```  
+
+
+\pagebreak  
+
+ From Figure 6, we can infer that there are more style of houses vailable for sale in lots in the inside of a community than Corners, Cul-de-sac or more frontage lots. Also, Cul-de-sac and 3 frontal properties are values more compared to the test of the lots (see Figure 7). 
+ \newline
+ 
+ 
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price by lot configuration and style", fig.height= 4}
+ggplot(data = SampleFrame, mapping = aes(y = SalePrice, x = HouseStyle, fill = HouseStyle)) + geom_boxplot(alpha = 0.25) + coord_flip() + facet_wrap(~LotConfig)
+```  
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Probability density of Sale price by lot configuration", fig.height= 2}
+ggplot(data = SampleFrame, mapping = aes(x = SalePrice, color = LotConfig, fill = LotConfig)) + geom_density(alpha = 0.25) + theme_classic()
+```
+
 
