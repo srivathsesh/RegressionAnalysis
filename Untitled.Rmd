@@ -1,9 +1,9 @@
 ---
-title: 'Assignment 1: Getting know your Data'
+title: 'Assignment 1: Getting to know your Data'
 author: "Sri Seshadri"
 date: "6/22/2017"
 output:
-  pdf_document: 
+  pdf_document:
     fig_caption: yes
   html_document: default
   word_document: default
@@ -16,11 +16,11 @@ ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
 options(scipen = 999)
 ```
 
-## Introduction
+## 1. Introduction
 
 This report discusses the Ames, Iowa housing data set, its quality and observations from Exploratory Data Analysis (EDA). EDA was used to identify potential predictor variables that can be used for predicting value of a "typical" home. 
 
-## Sample Definition
+## 2. Sample Definition
 
 It is assumed that typical home buyers are those that move from apartments to single family or town homes. Also apartments are less likely to be sold to individuals as they remain holdings of owners for rental income. Single family and town homes belong to "Residential Low density" (RL) zoning classification in the city of Ames. Data belonging to only to the RL zone is considered for this analysis. There are a total of `r nrow(ames)` data points, out of which the rows belonging to the following zoning classifications are not sampled. The sampled data however has few two-family conversion and duplex houses, which are not removed from the sample at this time. 
 
@@ -52,7 +52,7 @@ colsofinterest <- c('LotArea'
 , 'BedroomAbvGr'
 , 'KitchenQual'
 , 'TotRmsAbvGrd'
-, 'GarageCars'
+, 'GarageArea'
 , 'MoSold'
 , 'YrSold'
 , 'SaleCondition'
@@ -78,7 +78,7 @@ Counts <- data.frame(sapply(UniqueVals,length),do.call(rbind,dfapply(sanitycheck
 colnames(Counts) <- c( "# Unique", "n","missing")
 ```
 
-## Data cleaning and Sanity check
+## 3. Data cleaning and Sanity check
 
 From the Ames, Iowa housing dataset's dictionary (see Apendix) and based on some preliminary EDA the variables listed in Table 2 and Table 3 were chosen to be important for furhter analysis. The dataset is fairy clean and there are `r sum(sum(sanitycheck$missing),sum(Counts$missing)) ` points that are missing. Table 2 shows the summary statisics of the numeric variables and it is noted that statistics are within reasonable bounds and appear to be in the units of measure as described in the data dictionary. 
   Table 3 shows the chosen categorical (Nominal) variables and their unique number of values, sample sixe (n) and count of missing data. 4 of the 26 neighborhood are not in the sample frame chosen.  
@@ -88,7 +88,7 @@ knitr::kable(sanitycheck, caption = "Data sanity check for numeric variables")
 knitr::kable(Counts, caption = "Data sanity check for nominal variables",align = c("l","r","r","r")) 
 ```
 
-## Initial Exploratory Data Analysis (EDA)
+## 4. Initial Exploratory Data Analysis (EDA)
 
 For ease of performing exploratory data analysis using the R software, a unique identification number for each row is added as a variable to the dataset. The year sold (YrSold) and month sold (MoSold) are combined into one variable as yrmonth for example January 2001 is coded as 2001.01. The data is then arranged in chronological order by "Neigborhood". The sales proce of properties are right skewed as seen in Figure 1. It is hypothesized that values in some neighborhoods are higher relative to others.
 
@@ -111,6 +111,8 @@ ggplot(SampleFrame) + geom_histogram(mapping = aes(x = SalePrice),binwidth = 100
 ```
 \pagebreak
 
+
+### 4.1 Analysis by categorical variables
 
 It is evident from Figure 2 that the sale price that were above the upper control limit on the control chart were more from Stone Brook, Northridge Heights and Northridge than the rest of the neighborhoods. Also it is seen that the some neighborhoods have more sales than others (Figure 3). They may be either new housing developments or likey to have a floating population.  \newline  
 \newline  
@@ -139,7 +141,7 @@ ggplot(data = SampleFrame,mapping = aes(x = SaleCondition, y = SalePrice, color 
   
   
 ```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price by kitchen quality assesment", fig.height= 3}
-ggplot(data = SampleFrame,mapping = aes(x = KitchenQual, y = SalePrice, color = KitchenQual)) + geom_boxplot(orientation = 'h') + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + coord_flip() +  theme_classic() + theme(legend.position = "none")
+ggplot(data = SampleFrame,mapping = aes(x = KitchenQual, y = SalePrice, color = KitchenQual)) + geom_boxplot(orientation = 'h') + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + coord_flip() +  theme_classic() + theme(legend.position = "none") + xlab('Kitchen Quality')
 ```  
 
 
@@ -155,6 +157,105 @@ ggplot(data = SampleFrame, mapping = aes(y = SalePrice, x = HouseStyle, fill = H
 
 ```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Probability density of Sale price by lot configuration", fig.height= 2}
 ggplot(data = SampleFrame, mapping = aes(x = SalePrice, color = LotConfig, fill = LotConfig)) + geom_density(alpha = 0.25) + theme_classic()
+```  
+
+
+\pagebreak
+
+### 4.2 Analysis by continuous variables
+
+In the previous section we hypothesized that the sale price of homes are likely related to build year or the remodeled year. We'll use the year of remodel for exploration. (See Apendix for definition of YearRemodel variable). We find in figure 8 that newer homes are more expensive than the older homes. There is no strong relationship between the remodel year and the sale prive with a correlation of only `r as.numeric(format(cor(SampleFrame$YearRemodel, SampleFrame$SalePrice),digit = 2))`. However, it will be interesting to explore in which neighborhoods there may be much stronger relationship between the two variables. We'll explore this in the next section.
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price Vs Year Remodeled", fig.height= 3}
+p <- ggplot(data = SampleFrame) + theme_bw()
+p + geom_point(mapping = aes(x = YearRemodel, y = SalePrice)) + geom_smooth(mapping = aes(x = YearRemodel, y = SalePrice),method = 'loess', se = T) + ylab('Year or remodel or build')
+```  
+
+It was hypothesized during variable selection for exploration that the number of rooms in the house is highly correlated with the value of the house. While the correaltion between the two variables may be only `r as.numeric(format(cor(SampleFrame$TotRmsAbvGrd, SampleFrame$SalePrice),digit = 2))`, it may be a good predictor variable among others.  
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price Vs Number of rooms above ground", fig.height= 3}
+p + geom_point(mapping = aes(x = TotRmsAbvGrd, y = SalePrice)) + geom_smooth(mapping = aes(x = TotRmsAbvGrd, y = SalePrice),method = 'loess',se = T) + xlab('Total Rooms above ground')
+```  
+
+
+\pagebreak
+
+Similarly, total basement area was hypothesized to be a good predictor. While basement area by itself may not be a good predictor, it may be a good predictor variable among other variables. It'll be interesting to see which neighborhood have more basement area and if it may be a good predictor in some neighborhoods than others. We will explore the basement area relationship to neighborhood in the next section. Also, the effect of no basement houses need to be removed. 
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price Vs Total basement area", fig.height= 3}
+p + geom_point(mapping = aes(x = TotalBsmtSF, y = SalePrice)) + geom_smooth(mapping = aes(x = TotalBsmtSF, y = SalePrice),method = 'loess',se = T) + xlab('Total basement area')
+```  
+
+It is assumed that bigger homes are of high value and are built for high occupancy. High occupancy homes are likely to have more bathrooms and living area (see Figure 12). The total number of bathrooms is a sum of the half baths and the full baths in the house. The total number of baths may be a week predictor of sale price by itself (Figure 11), but may be a goog candidate for multivariate regression models among others.
+  
+    
+    
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price Vs Number  baths", fig.height= 3}
+library(gridExtra)
+SampleFrame <- SampleFrame %>% 
+  mutate(TotalBath = BsmtFullBath + BsmtHalfBath + FullBath + HalfBath)
+ Totalbaths <- ggplot (data = SampleFrame) + geom_point(mapping = aes(x = TotalBath, y = SalePrice)) + xlab('Total baths') + geom_smooth(mapping = aes(x = TotalBath, y = SalePrice),method = 'loess',se = T) + xlab('Total bath') + theme_bw()
+ 
+ Fullbaths <- ggplot (data = SampleFrame) + geom_point(mapping = aes(x = FullBath, y = SalePrice)) + xlab('Full baths') + geom_smooth(mapping = aes(x = FullBath, y = SalePrice),method = 'loess',se = T) + xlab('Full bath') + theme_bw()
+ 
+grid.arrange(Totalbaths, Fullbaths, ncol = 2)
+ 
+```  
+  
+  
+\pagebreak  
+
+Is is hypothesized that bigger the house, more likely is higher occupancy and sale value. The higher occupancy means a likely living area and garage space for parking. Figure 12 shows there is strong relationship between living area and sale price. 
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price for high occupancy homes", fig.height= 3}
+LivingArea <- ggplot(SampleFrame) + geom_point(mapping = aes(x = GrLivArea, y = SalePrice)) + xlab('Living Area') + geom_smooth(mapping = aes(x = GrLivArea, y = SalePrice), se = T) + theme_bw()
+
+GargeArea<- ggplot(SampleFrame) + geom_point(mapping = aes(x = GarageArea, y = SalePrice)) + xlab('Garage Area') + geom_smooth(mapping = aes(x = GarageArea, y = SalePrice), se = T) + theme_bw()
+
+grid.arrange(LivingArea, GargeArea, ncol = 2)
+```  
+  
+  
+## 5. Exploratory Data Analysis for Modelling
+
+From the above exploratory analysis, the follwowing parameters come out to be good candidates for further analysis. a) Living Area, b) basement area and c) Sale condition.  
+\newline  
+Figure 12 hints at a good linear relationship between Living Area and the value of homes. However, the bullhorn shape of the scatter plot suggests that a transformation may help. The sale price and living area variables are transformed logrithmically. Figure 13 shows a much better relationship when the transformed values are used. The blue line shows the regression line.  
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Log Sale price vs Log Living Area", fig.height= 3}
+SampleFrame <- SampleFrame %>% 
+  mutate(LogSalePrice = log10(SalePrice)) %>% 
+  mutate(LogLivArea = log10(GrLivArea)) %>% 
+  mutate(LogBasementArea = log10(TotalBsmtSF))
+
+LogsalesPrice <- ggplot(data = SampleFrame,mapping = aes(x = LogLivArea, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Log Living Area') + theme_bw()
+```  
+
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Basement area", fig.height= 3}
+PositiveBsmtSF <- SampleFrame %>% 
+  filter(TotalBsmtSF > 0 & TotalBsmtSF < 2500)
+
+ggplot(data = PositiveBsmtSF,mapping = aes(x = TotalBsmtSF, y = SalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal basement area') + theme_bw()
+
+LogsalesPrice <- ggplot(data = PositiveBsmtSF,mapping = aes(x = TotalBsmtSF, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal basement area') + theme_bw()
+
+LogsalesBsmt <- ggplot(data = PositiveBsmtSF,mapping = aes(x = LogBasementArea, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal log basement area') + theme_bw()
+
+grid.arrange(LogsalesPrice,LogsalesBsmt,ncol = 2)
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
