@@ -223,7 +223,7 @@ From the above exploratory analysis, the follwowing parameters come out to be go
 Figure 12 hints at a good linear relationship between Living Area and the value of homes. However, the bullhorn shape of the scatter plot suggests that a transformation may help. The sale price and living area variables are transformed logrithmically. Figure 13 shows a much better relationship when the transformed values are used. The blue line shows the regression line.  \newline  
 \newline  
 As seen in Figure 10, there is approximately a linear linerationship between basement area and sale price, when basment area is greater than 0 and less than 2500 square feet. To further examine the relationship, the data corresponding to the target vasement area was subsetted. Figure 14 shows the relationship between sale price and basement area; log of sales vs basement area and log of both sales and basement area. It can be concluded that basment area should be chosen as one of the predictors for the model.
-
+\pagebreak
 
 ```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Log Sale price vs Log Living Area", fig.height= 3}
 SampleFrame <- SampleFrame %>% 
@@ -235,7 +235,7 @@ ggplot(data = SampleFrame,mapping = aes(x = LogLivArea, y = LogSalePrice)) + geo
 ```  
 
 
-```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Basement area", fig.height= 5}
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Basement area", fig.height= 3}
 PositiveBsmtSF <- SampleFrame %>% 
   filter(TotalBsmtSF > 0 & TotalBsmtSF < 2500)
 
