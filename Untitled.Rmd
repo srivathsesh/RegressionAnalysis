@@ -220,7 +220,10 @@ grid.arrange(LivingArea, GargeArea, ncol = 2)
 
 From the above exploratory analysis, the follwowing parameters come out to be good candidates for further analysis. a) Living Area, b) basement area and c) Sale condition.  
 \newline  
-Figure 12 hints at a good linear relationship between Living Area and the value of homes. However, the bullhorn shape of the scatter plot suggests that a transformation may help. The sale price and living area variables are transformed logrithmically. Figure 13 shows a much better relationship when the transformed values are used. The blue line shows the regression line.  
+Figure 12 hints at a good linear relationship between Living Area and the value of homes. However, the bullhorn shape of the scatter plot suggests that a transformation may help. The sale price and living area variables are transformed logrithmically. Figure 13 shows a much better relationship when the transformed values are used. The blue line shows the regression line.  \newline  
+\newline  
+As seen in Figure 10, there is approximately a linear linerationship between basement area and sale price, when basment area is greater than 0 and less than 2500 square feet. To further examine the relationship, the data corresponding to the target vasement area was subsetted. Figure 14 shows the relationship between sale price and basement area; log of sales vs basement area and log of both sales and basement area. It can be concluded that basment area should be chosen as one of the predictors for the model.
+
 
 ```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Log Sale price vs Log Living Area", fig.height= 3}
 SampleFrame <- SampleFrame %>% 
@@ -228,21 +231,21 @@ SampleFrame <- SampleFrame %>%
   mutate(LogLivArea = log10(GrLivArea)) %>% 
   mutate(LogBasementArea = log10(TotalBsmtSF))
 
-LogsalesPrice <- ggplot(data = SampleFrame,mapping = aes(x = LogLivArea, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Log Living Area') + theme_bw()
+ggplot(data = SampleFrame,mapping = aes(x = LogLivArea, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Log Living Area') + theme_bw()
 ```  
 
 
-```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Basement area", fig.height= 3}
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Basement area", fig.height= 5}
 PositiveBsmtSF <- SampleFrame %>% 
   filter(TotalBsmtSF > 0 & TotalBsmtSF < 2500)
 
-ggplot(data = PositiveBsmtSF,mapping = aes(x = TotalBsmtSF, y = SalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal basement area') + theme_bw()
+RestrictedBasement <- ggplot(data = PositiveBsmtSF,mapping = aes(x = TotalBsmtSF, y = SalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal basement area') + theme_bw()
 
 LogsalesPrice <- ggplot(data = PositiveBsmtSF,mapping = aes(x = TotalBsmtSF, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal basement area') + theme_bw()
 
 LogsalesBsmt <- ggplot(data = PositiveBsmtSF,mapping = aes(x = LogBasementArea, y = LogSalePrice)) + geom_point() + geom_smooth(method = "lm", se = T) + xlab('Toal log basement area') + theme_bw()
 
-grid.arrange(LogsalesPrice,LogsalesBsmt,ncol = 2)
+grid.arrange(RestrictedBasement,arrangeGrob(LogsalesPrice,LogsalesBsmt),ncol= 2)
 ```
 
 
