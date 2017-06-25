@@ -80,7 +80,7 @@ colnames(Counts) <- c( "# Unique", "n","missing")
 
 ## 3. Data cleaning and Sanity check
 
-From the Ames, Iowa housing dataset's dictionary (see Apendix) and based on some preliminary EDA the variables listed in Table 2 and Table 3 were chosen to be important for furhter analysis. The dataset is fairy clean and there are `r sum(sum(sanitycheck$missing),sum(Counts$missing)) ` points that are missing. Table 2 shows the summary statisics of the numeric variables and it is noted that statistics are within reasonable bounds and appear to be in the units of measure as described in the data dictionary. 
+From the Ames, Iowa housing dataset's dictionary and based on some preliminary EDA, the variables listed in Table 2 and Table 3 were chosen to be important for furhter analysis. The dataset is fairy clean and there are `r sum(sum(sanitycheck$missing),sum(Counts$missing)) ` points that are missing. Table 2 shows the summary statisics of the numeric variables and it is noted that statistics are within reasonable bounds and appear to be in the units of measure as described in the data dictionary. 
   Table 3 shows the chosen categorical (Nominal) variables and their unique number of values, sample sixe (n) and count of missing data. 4 of the 26 neighborhood are not in the sample frame chosen.  
 
 ```{r pressure, echo=FALSE}
@@ -164,7 +164,7 @@ ggplot(data = SampleFrame, mapping = aes(x = SalePrice, color = LotConfig, fill 
 
 ### 4.2 Analysis by continuous variables
 
-In the previous section we hypothesized that the sale price of homes are likely related to build year or the remodeled year. We'll use the year of remodel for exploration. (See Apendix for definition of YearRemodel variable). We find in figure 8 that newer homes are more expensive than the older homes. There is no strong relationship between the remodel year and the sale prive with a correlation of only `r as.numeric(format(cor(SampleFrame$YearRemodel, SampleFrame$SalePrice),digit = 2))`. However, it will be interesting to explore in which neighborhoods there may be much stronger relationship between the two variables. We'll explore this in the next section.
+In the previous section we hypothesized that the sale price of homes are likely related to build year or the remodeled year. We'll use the year of remodel year for exploration. We find in figure 8 that newer homes are more expensive than the older homes. There is no strong relationship between the remodel year and the sale prive with a correlation of only `r as.numeric(format(cor(SampleFrame$YearRemodel, SampleFrame$SalePrice),digit = 2))`. However, it will be interesting to explore in which neighborhoods there may be much stronger relationship between the two variables. We'll explore this in the next section.
 
 ```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price Vs Year Remodeled", fig.height= 3}
 p <- ggplot(data = SampleFrame) + theme_bw()
@@ -251,7 +251,9 @@ Exceed <- 100
 
 We we'll follow up on our hypothesis (Figure 4) from the previous section, if sale condition of partial assessment before sale can be a good predictor across neighborhoods. The data with sale condition equalling "partial" is grouped together and compared against other sale conditions across neighborhood. For ease of presentation and interpretation, only select neighborhoods with number of sales exceeding `r Exceed` is shown in Figure 15. It can be infered that Sale condition of "Partial" may be a weak predictor across neighborhoods. 
 
-```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Sale condition group", fig.height= 6}
+\pagebreak
+
+```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price vs Sale condition group", fig.height= 4}
 
 SampleFrame <- SampleFrame %>% 
   mutate(SaleConditionGrp = ifelse(SaleCondition == 'Partial',"Partial","Other Conditions"))
@@ -259,7 +261,11 @@ SampleFrame <- SampleFrame %>%
 SelectHood <- SampleFrame %>% dplyr::count(Neighborhood) %>% filter(n > Exceed)
 df <- SampleFrame %>% dplyr::filter(Neighborhood %in% SelectHood$Neighborhood)
 ggplot(data = df, mapping = aes(x = SaleConditionGrp, y = SalePrice, color = SaleConditionGrp)) + geom_boxplot() + geom_point() + geom_jitter(position = position_jitter(width = 0.1, height = 0.1)) + facet_wrap(~Neighborhood) + theme_bw()
-```
+```  
+
+## Conclusion:
+Exploratory Data Analysis (EDA) is very critical to get a deep understanding of the data, which results in proper selection of sample frame and predictor variables for a good predictive model. The analysis serves as a strong foundation for developing and evaluating predictive models.
+
 
 
 
