@@ -18,7 +18,7 @@ options(scipen = 999)
 
 ## 1. Introduction
 
-This report discusses the Ames, Iowa housing data set, its quality and observations from Exploratory Data Analysis (EDA). EDA was used to identify potential predictor variables that can be used for predicting value of a "typical" home. It is shown below that a. Living area b. Total basement area c. Garage area d. Total rooms above grade e. Neighborhood f. Number of bathrooms are good selection of predictor variables for modelling the sale price for typical homes in Ames, Iowa.  
+This report discusses the Ames, Iowa housing data set, its quality and observations from Exploratory Data Analysis (EDA). EDA was used to identify potential predictor variables that can be used for predicting value of a "typical" home. It is shown below that a.Living area b.Total basement area c.Garage area d.Total rooms above grade e.Neighborhood f.Number of bathrooms are good selection of predictor variables for modelling the sale price of typical homes in Ames, Iowa.  
 
 ## 2. Sample Definition
 
@@ -147,7 +147,7 @@ ggplot(data = SampleFrame,mapping = aes(x = KitchenQual, y = SalePrice, color = 
 
 \pagebreak  
 
- From Figure 6, we can infer that there are more style of houses vailable for sale in lots in the inside of a community than Corners, Cul-de-sac or more frontage lots. Also, Cul-de-sac and 3 frontal properties are values more compared to the test of the lots (see Figure 7). 
+ From Figure 6, we can infer that there are more style of houses vailable for sale in lots in the inside of a community than Corners, Cul-de-sac or more frontage lots. Also, Cul-de-sac and 3 frontal properties are valued more compared to the test of the lots (see Figure 7). 
  \newline
  
  
@@ -168,7 +168,7 @@ In the previous section we hypothesized that the sale price of homes are likely 
 
 ```{r,echo= FALSE, warning=FALSE, message=FALSE,fig.cap="Sale price Vs Year Remodeled", fig.height= 3}
 p <- ggplot(data = SampleFrame) + theme_bw()
-p + geom_point(mapping = aes(x = YearRemodel, y = SalePrice)) + geom_smooth(mapping = aes(x = YearRemodel, y = SalePrice),method = 'loess', se = T) + ylab('Year or remodel or build')
+p + geom_point(mapping = aes(x = YearRemodel, y = SalePrice)) + geom_smooth(mapping = aes(x = YearRemodel, y = SalePrice),method = 'loess', se = T) + ylab('Sale Price')
 ```  
 
 It was hypothesized during variable selection for exploration that the number of rooms in the house is highly correlated with the value of the house. While the correaltion between the two variables may be only `r as.numeric(format(cor(SampleFrame$TotRmsAbvGrd, SampleFrame$SalePrice),digit = 2))`, it may be a good predictor variable among others.  
@@ -186,7 +186,7 @@ Similarly, total basement area was hypothesized to be a good predictor. While ba
 p + geom_point(mapping = aes(x = TotalBsmtSF, y = SalePrice)) + geom_smooth(mapping = aes(x = TotalBsmtSF, y = SalePrice),method = 'loess',se = T) + xlab('Total basement area')
 ```  
 
-It is assumed that bigger homes are of high value and are built for high occupancy. High occupancy homes are likely to have more bathrooms and living area (see Figure 12). The total number of bathrooms is a sum of the half baths and the full baths in the house. The total number of baths may be a week predictor of sale price by itself (Figure 11), but may be a goog candidate for multivariate regression models among others.
+It is assumed that bigger homes are of high value and are built for high occupancy. High occupancy homes are likely to have more bathrooms and living area (see Figure 12). The total number of bathrooms is a sum of the half baths and the full baths in the house. The total number of baths may be a week predictor of sale price by itself (Figure 11), but may be a good candidate for multivariate regression models among others.
   
     
     
