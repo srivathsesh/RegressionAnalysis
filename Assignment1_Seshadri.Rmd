@@ -27,7 +27,7 @@ options(scipen = 999)
 
 It is assumed that typical home buyers are those that move from apartments to single family or town homes. Also apartments are less likely to be sold to individuals as they remain holdings of owners for rental income. Single family and town homes belong to "Residential Low density" (RL) zoning classification in the city of Ames. Data belonging to only to the RL zone is considered for this analysis. There are a total of `r nrow(ames)` data points, out of which the rows belonging to the following zoning classifications are not sampled. The sampled data however has few two-family conversion and duplex houses, which are not removed from the sample at this time. 
 
-```{r Sample Frame, message=FALSE, warning=FALSE, tidy=TRUE,width = 50}
+```{r Sample Frame, echo = FALSE, message=FALSE, warning=FALSE, tidy=TRUE,width = 50}
 library(magrittr)
 waterfall <- ames %>%
   dplyr::filter(Zoning != 'RL') %>% 

@@ -1,0 +1,141 @@
+---
+title: 'Assignment 2: Regression Model Building'
+author: "Sri Seshadri"
+date: "7/1/2017"
+output: 
+  pdf_document: 
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+## 1. Introduction
+
+This report discusses the regression models for estimating or predicting the sales price of "typical" homes in Ames, Iowa. 
+
+```{r Read data, echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
+ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
+# chamge from scientic notations, to restore to default options(scipen = 0)
+options(scipen = 999)
+library(magrittr)
+```
+
+
+```{r Sample Frame, echo = FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
+LivingAreaCutoff <- 800
+# Adding drop conditions varaible
+# insert dummy variable to code SaleCondition being either equal to 'Normal' or 'Partial'
+ames$Sale_NrmPar <- ifelse(ames$SaleCondition == 'Normal' | ames$SaleCondition == 'Partial', 1,0)
+ames$DropCondition <- ifelse(ames$Zoning!='RL','01: Not LowDensityZone',
+	ifelse(ames$Sale_NrmPar == 0,'02: Not Normal/Partial Sale',
+	ifelse(ames$Street!='Pave','03: Street Not Paved',
+	ifelse(ames$GrLivArea <LivingAreaCutoff,'04: Less than 800 SqFt',
+	'99: Eligible Sample')
+	)))
+
+# Waterfall
+waterfall <- ames %>% 
+  dplyr::group_by(DropCondition) %>% 
+  dplyr::summarise(counts=n())
+
+```
+
+
+## 2. Sample definition
+
+It is assumed that typical home buyers are those that move from apartments to single family or town homes. Also apartments are less likely to be sold to individuals as they remain holdings of owners for rental income. Single family and town homes belong to "Residential Low density" (RL) zoning classification in the city of Ames. Data belonging to only to the RL zone is considered for analysis and model development. Also, it is assumed that typical homes have paved streets for access and above grade living area greater than `r LivingAreaCutoff` square feet. Sales data belonging to homes that were sold in abnormal conditions such as trade in, foreclosure or short sale are not included in the analysis. Also, sales between family members, sale of adjoining lot, linked properties are omitted from the data. Table 1 shows the waterfall of the data not included in the data and the eligible samples.
+
+```{r Waterfall, echo=FALSE, warning = F, message=F, tidy=T}
+# Print waterfall table
+knitr::kable(waterfall, align = c("l", "r"),caption = "Drop waterfall")
+# Define training portion of the data
+trainPercent <- round(0.7,1)
+# Columns if interest
+colsofinterest <- c('SID'
+  ,'LotArea'
+, 'LotConfig'
+, 'Neighborhood'
+, 'BldgType'
+, 'HouseStyle'
+, 'OverallCond'
+, 'YearRemodel'
+, 'TotalBsmtSF'
+, 'GrLivArea'
+, 'BsmtFullBath'
+, 'BsmtHalfBath'
+, 'FullBath'
+, 'HalfBath'
+, 'BedroomAbvGr'
+, 'KitchenQual'
+, 'TotRmsAbvGrd'
+, 'GarageArea'
+, 'MoSold'
+, 'YrSold'
+, 'SaleCondition'
+, 'SalePrice')
+
+```
+
+
+The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. See appendix A.1 for data quality checks.
+
+```{r SampleFrame, echo = F, warning = F, message=F, tidy=T}
+colsmatrix <- matrix(colsofinterest[2:length(colsofinterest)],ncol = 3)
+knitr::kable(colsmatrix, caption = "Variables of interest")
+```
+\pagebreak
+
+### 2.1 Training and validation samples.
+
+From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly samples to be used as the dataset on which model is developed from. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. <br>
+\newline  
+
+
+
+```{r TrainingSet, echo=F, warning=F, message=F, tidy=T}
+SampleFrame <- ames %>% 
+  dplyr::filter(DropCondition == '99: Eligible Sample') %>% 
+  dplyr::select_(.dots = colsofinterest)
+
+train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
+train <- train %>% dplyr::arrange(SID)
+Validation <- dplyr::sample_n(SampleFrame,size = (1-trainPercent)*nrow(SampleFrame), replace = F, set.seed(2000))
+Validation <- Validation %>% dplyr::arrange(SID)
+```
+
+\pagebreak
+
+\appendix
+\begin {center}
+\section {APPENDIX}
+\end {center}
+## A.1 Data quality check
+
+Tables below shows the summary statisics of the numeric variables and it is noted that statistics are within reasonable bounds and appear to be in the units of measure as described in the data dictionary with only 2 rows missing. Also shown are the number of levels or categories in the nominal variables and the number of missing data (0 missing). The data is deemed usable.
+
+```{r Data Quality, echo=F,warning=F,message=F,tidy=T}
+library(mosaic)
+sanitycheck <- do.call(rbind,dfapply(SampleFrame,favstats, select = is.numeric))
+knitr::kable(sanitycheck, caption = "Data sanity check for numeric variables") 
+sanitycheckcharacter <-select(SampleFrame, colnames(SampleFrame[1,sapply(SampleFrame,class) == 'character']))
+
+library(purrr)
+UniqueVals <- sanitycheckcharacter %>% 
+  map(unique)
+#s <- data.frame(names(tst),sapply(tst,function(x){paste(x,collapse = ",")}),row.names = NULL)
+Counts <- data.frame(sapply(UniqueVals,length),
+                     do.call(rbind,dfapply(sanitycheckcharacter,length,select = is.character)),do.call(rbind,dfapply(sanitycheckcharacter,n_missing,select = is.character)),row.names = names(UniqueVals))
+colnames(Counts) <- c( "# Unique", "n","missing")
+
+knitr::kable(Counts, caption = "Data sanity check for nominal variables",align = c("l","r","r","r")) 
+```
+
+\pagebreak
+
+## A.2 R code
+
+```{r, ref.label= knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
+
