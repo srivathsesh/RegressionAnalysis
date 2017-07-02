@@ -83,6 +83,8 @@ colsofinterest <- c('SID'
 
 The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. See appendix A.1 for data quality checks.
 
+\pagebreak
+
 ```{r SampleFrame, echo = F, warning = F, message=F, tidy=T}
 # Cleanly show the columns of interest in pdf. Making the colsofinterest as matrix for easy printing.
 colsmatrix <- matrix(colsofinterest[2:length(colsofinterest)],ncol = 3)
