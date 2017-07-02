@@ -193,13 +193,13 @@ grid.arrange(RestGarageVsLivArea,RestGarageVsBsmt, nrow=2)
   
 ## 4. Simple Linear Regression Models
 
-The Above grade living area and total basement seem to be good two candidates for building a regression model. The regression models would built on the training data set. However, after the EDA, it seems best to remove samples that correspond to above grade living area of 4000 square feet or greater and garage area greater than 1000 square feet. While it is best to update the drop conditions in section 2, at this time, the additional drop conditions would be applied to the training set. The training set data with new drop conditions applied is called "trainFiltered" (The R output reference this as the data)"
+The Above grade living area and total basement area seem to be good two candidates for building a regression model. The regression models would built on the training data set. However, after the EDA, it seems best to remove samples that correspond to above grade living area of 4000 square feet or greater and garage area greater than 1000 square feet. While it is best to update the drop conditions in section 2, at this time, the additional drop conditions would be applied to the training set. The training set data with new drop conditions applied is called "trainFiltered" (The R output reference this as the data)"
 
 ### 4.1 Simple linear regression model with "above grade living area"" as predictor
 
 The model fit results for a single linear regression model with Living area above grade as predictor is seen below. The intercept = 0 hypothesis if failed to be rejected. It would be appropriate to fit a no intercept model. From a goodness of fit perspective, the residuals are of mean 0 and distributed fairly normally from a "thick pen test" of the Q-Q plot. However, the residulas are not homoscedastic, the residuals vs predictor have a bullhorn shape, i.e. the varaition in the residuals increases as the living area increases. The model is not suitable.
 
-```{r SLR, echo=F,message=F,warning=F,fig.cap="Model diagnostics Sale Price ~ GrLivArea"}
+```{r SLR, echo=F,message=F,warning=F,fig.cap="Model diagnostics Sale Price ~ GrLivArea", tidy=T}
 options(scipen = 0)
 trainFiltered <- train %>% 
   dplyr::filter(GrLivArea < 4000 & GarageArea < 1000)
@@ -216,19 +216,80 @@ hist(RedDf$.resid, main = "Histogram of residuals", xlab = "Residuals")
 qqnorm(RedDf$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
 qqline(RedDf$.resid)
 plot(RedDf$GrLivArea,RedDf$.resid,main = "Residuals vs Living Area", xlab = "Above grade living area", ylab = "Residuals")
-SLR_LivingArea_NoIntercept <- lm(data = trainFiltered, SalePrice ~ GrLivArea +0)
+
 ```  
 
 \pagebreak
 
 ### 4.1.1 Non - intercept model with Above grade living area as predictor
+In the previous section , it wwas shown that the intercept was not significant, therefore a no- intercept model is fit. Below are the results. The no intercept model seem to have a better Adjusted R-Squared value 0.94; however, there is no practical implication of this fit. When the residual plots are compared with the previous model, the kutosis of the residuals has increased, but the bullhorn pattern still remains. 
+
+```{r SLR0intercept, echo=F,warning=F,message=F,tidy=T,fig.cap="No intercept model"}
+# No intercept model
+SLR_LivingArea_NoIntercept <- lm(data = trainFiltered, SalePrice ~ GrLivArea +0)
+# print model
+summary(SLR_LivingArea_NoIntercept)
+
+# Model diagnostics
+ResdfNI <- broom::augment(SLR_LivingArea_NoIntercept)
+# Plot of residuals
+layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+hist(ResdfNI$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(ResdfNI$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(ResdfNI$.resid)
+plot(ResdfNI$GrLivArea,ResdfNI$.resid,main = "Residuals vs Living Area", xlab = "Above grade living area", ylab = "Residuals")
+
+```
 
 
 \pagebreak
   
-    
-    
-\newpage
+### 4.2 Simple linear regression with Total Basement area as predictor
+The results of a simple linear model with Total basement area as predictor is shown below. The sum of squares error is much greater than the one with living area as predictor. Making basment area a poor predictor. While the model diagnostics pass the normality tests, but is not homoscedastic as the variance increases at higher basement area. Moreover, the residuals are within +/- 200,000 dollars. Therefore the model cannot be used in practice.
+
+```{r SLRBasement, echo=F,warning=F,message=F,tidy=T,fig.cap="Simple Linear Regression - Total Basement Area as predictor"}
+SLR_BsmtArea <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF)
+print(summary(SLR_BsmtArea), caption = 'ANOVA Simple Linear Regression Total basment area')
+
+# Model diagnostics
+# Tidy store of model results
+ResdfBsmt <- broom::augment(SLR_BsmtArea)
+# Plot of residuals
+layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+hist(ResdfBsmt$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(ResdfBsmt$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(ResdfBsmt$.resid)
+plot(ResdfBsmt$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+
+```  
+
+
+\pagebreak
+
+## 5. Multiple linear regression model
+
+The below results is of multiple linear model fit on the training data with both the above grade area and the total basment area as predictors.
+The model has an adjusted R-squared of 70% and the residuals seem to fairly follow the normal distribution with mean zero. The residuals are random. With this model, we are likely (95% of the time) to be estimating sale price with an error of =/- $86000. From a practical use perspective, this model needs improvement. 
+
+```{r MLR, echo=F, warning=F,message=F,tidy=T, fig.cap= "Multiple Linear regression"}
+MLR <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF + GrLivArea)
+print(summary(MLR), caption = 'ANOVA Multiple Linear Regression Total basment area')
+
+# Model diagnostics
+# Tidy store of model results
+MLR_Model <- broom::augment(MLR)
+# Plot of residuals
+layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
+hist(MLR_Model$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(MLR_Model$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(MLR_Model$.resid)
+plot(MLR_Model$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
+anova(SLR_LivingArea_NoIntercept,SLR_BsmtArea)
+# anova(SLR_LivingArea_NoIntercept,SLR_BsmtArea,MLR)
+```
+
+\pagebreak
 
 
 \appendix
