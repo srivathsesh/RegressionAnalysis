@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=60),tidy=TRUE)
 
 ## 1. Introduction
 
-This report discusses the regression models for estimating or predicting the sales price of "typical" homes in Ames, Iowa. 
+This report discusses linear regression models and the model generation proces, for estimating or predicting the sales price of "typical" homes in Ames, Iowa. The models were limited only two predictor variables. Total basement area and above grade living area (sometimes referred as living area in this report) were found to be good candidates for predicting sale price of typical homes. The model was formulated as Sale Price = 84.11(Total Basement Area) + 97.6(Above Grade Living Area) - 50244.02. The model explains 70% of the variation in Sale Price. But is limited in application due to prediction errors ranging up to +/- $ 86,000 (+/- 2 standard deviation of residuals).
 
 ```{r Read data, echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
 ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
@@ -42,7 +42,6 @@ waterfall <- ames %>%
   dplyr::summarise(counts=n())
 
 ```
-
 
 ## 2. Sample definition
 
@@ -92,11 +91,10 @@ knitr::kable(colsmatrix, caption = "Variables of interest")
 ```
 
 
-\pagebreak
 
 ### 2.2 Training and validation samples.
 
-From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly samples to be used as the dataset on which model is developed from. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 3 shows the split of the total eligible samples.  
+From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly sampled to be used as the dataset for model development. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 3 shows the split of the total eligible samples.  
 
 
 ```{r TrainingSet, echo=F, warning=F, message=F, tidy=T}
@@ -119,10 +117,10 @@ knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling")
 
 ## 3. Exploratory Data Analysis (EDA)
 
-For exploratory analysis, entire sample frame is used, so any anomalies that were missed surfaces in this process. While EDA by itself doesn not become an data cleaning step, but certainly allows the opportunity to identify issues in the data. In this section we will focus only on the continuous variable. Exploratory analysis on categorical variables can be found in https://github.com/srivathsesh/RegressionAnalysis/blob/master/Assignment1_Seshadri.pdf.
+For exploratory analysis, entire sample frame is used, so any anomalies that were missed surfaces in this process. While EDA by itself does not become an data cleaning step, but certainly allows the opportunity to identify issues in the data. In this section we will focus only on the continuous variable. Exploratory analysis on categorical variables can be found in https://github.com/srivathsesh/RegressionAnalysis/blob/master/Assignment1_Seshadri.pdf.
 
 ### 3.1 EDA of continuous variables
-Is is hypothesized that bigger the house, more likely is higher occupancy and sale value. The higher occupancy means a likely higher lot area, living area, basement area, garage space for parking, total number of rooms and baths. Also it is hypothesized that newer homes are likely to be more valued than the older homes. Before exploring each of the potential predictors, it will be useful to see if there is multicollinearity amongst the predictors. Figure 1 shows, potential relationship between Above grade living area, Sale price and Total basment area. The lot area may have a steeper slope with sale price. This warrants a closer look.  
+It is hypothesized that bigger the house, more likely the occupancy and sale value. Higher occupancy means likely higher lot area, living area, basement area, garage space for parking, total number of rooms and baths. Also it is hypothesized that newer homes are likely to be more valued than the older homes. Before exploring each of the potential predictors, it will be useful to see if there is multicollinearity amongst the predictors. Figure 1 shows, potential relationship between Above grade living area, Sale price and Total basment area.   
 
 ```{r Multicolinearity, echo=F,warning=F,message=F,tidy=T,fig.cap="Multicolinearity check amongst potential predictors"}
 # Multicolinearity exploration
@@ -130,7 +128,7 @@ test <- SampleFrame[,c('SalePrice','TotalBsmtSF','GarageArea', 'GrLivArea', 'Lot
 pairs(test)
 ```  
 
-Figure 2 shows the relationship between total basement area and the sale price. There are few outliers in the basement area. To explore the relationship better, data corresponding to basement area above 2500 square feet is removed the plot. It is seen that total basement area seens very promising predictor. It may be used along with other predictors to model sales price.  
+Figure 2 shows the relationship between total basement area and the sale price. There are few outliers in the basement area. To explore the relationship better, data corresponding to basement area above 2500 square feet is removed. It is seen that total basement area is very promising predictor. It may be used along with other predictors to model sales price.  
   
   
 
@@ -154,7 +152,7 @@ grid.arrange(BasementArea, RestrictedBasement, ncol = 2)
 
 \pagebreak
 
-Figure 3 shows the relationship between Living area and Total basement area as well as Sale price. There seem to be a linear relationship between living area and sale price when living area is less than 4000 square feet. Likewise with Garage area when its greater than zero and less than 1000 square feet. Figure 4 explores if there is a relationship between Garage Area, Living area and Total basement area. There is a weak correaltion between living area and total basement area.
+Figure 3 shows the relationship between Living area and Total basement area with Sale price. There seem to be a linear relationship between living area and sale price when living area is less than 4000 square feet. Similarly with Garage area when greater than zero and less than 1000 square feet. Figure 4 explores the relationship between Garage Area, Living area and Total basement area. There is correaltion amongst the three variables.
 
 ```{r Living Area vs Sale Price vs Garage Area, echo=F,warning=F,message=F,tidy=T,fig.height=3,fig.cap=" Sales Price vs Garage Area and LivingArea"}
 LivingArea <- ggplot(SampleFrame) + geom_point(mapping = aes(x = GrLivArea, y = SalePrice)) + xlab('Living Area') + geom_smooth(mapping = aes(x = GrLivArea, y = SalePrice), se = T) + theme_bw()
@@ -193,16 +191,18 @@ grid.arrange(RestGarageVsLivArea,RestGarageVsBsmt, nrow=2)
   
 ## 4. Simple Linear Regression Models
 
-The Above grade living area and total basement area seem to be good two candidates for building a regression model. The regression models would built on the training data set. However, after the EDA, it seems best to remove samples that correspond to above grade living area of 4000 square feet or greater and garage area greater than 1000 square feet. While it is best to update the drop conditions in section 2, at this time, the additional drop conditions would be applied to the training set. The training set data with new drop conditions applied is called "trainFiltered" (The R output reference this as the data)"
+From the Exploratory Data analysis, it is seen that the above grade living area and total basement area are good candidates for predictor variables for regression modeling. The regression models would be built on the training data set. Since linear relationships between Sale price and basment area and living are are more pronounced when above grade living area is less than 4000 square feet and garage area less than 1000 square feet; we will remove data corresponding to above grade living area greater 4000 square feet and total garage area greater 10000 square feet. While it is best to update the drop conditions in section 2, at this time, the additional drop conditions would be applied to the training set. The training set data with new drop conditions applied is called "trainFiltered" (The R output reference this as the data)"
 
 ### 4.1 Simple linear regression model with "above grade living area"" as predictor
 
-The model fit results for a single linear regression model with Living area above grade as predictor is seen below. The intercept = 0 hypothesis if failed to be rejected. It would be appropriate to fit a no intercept model. From a goodness of fit perspective, the residuals are of mean 0 and distributed fairly normally from a "thick pen test" of the Q-Q plot. However, the residulas are not homoscedastic, the residuals vs predictor have a bullhorn shape, i.e. the varaition in the residuals increases as the living area increases. The model is not suitable.
+The model fit results for a single linear regression model with Living area above grade as predictor is seen below. We fail to reject the null hypothesis of intercept = 0. It would be appropriate to fit a no intercept model. From a goodness of fit perspective, the residuals are of mean 0 and distributed fairly normally based on "thick pen test" on Q-Q plot. However, the residulas are not homoscedastic, the residuals vs predictor have a bullhorn shape, i.e. the varaition in the residuals increases as the living area increases. The model is not suitable.
 
 ```{r SLR, echo=F,message=F,warning=F,fig.cap="Model diagnostics Sale Price ~ GrLivArea", tidy=T}
 options(scipen = 0)
+# Filtering Living Area < 4000 and Garage area < 1000 and creating additional variable of LogSalePrice in preparation of the next section.
 trainFiltered <- train %>% 
-  dplyr::filter(GrLivArea < 4000 & GarageArea < 1000)
+  dplyr::filter(GrLivArea < 4000 & GarageArea < 1000) %>% 
+  dplyr::mutate(LogSalePrice = log10(SalePrice))
 
 SLR_LivingArea <- lm(data = trainFiltered,SalePrice ~ GrLivArea)
 print(summary(SLR_LivingArea), caption = 'ANOVA Simple Linear Regression Above grade living area')
@@ -222,7 +222,7 @@ plot(RedDf$GrLivArea,RedDf$.resid,main = "Residuals vs Living Area", xlab = "Abo
 \pagebreak
 
 ### 4.1.1 Non - intercept model with Above grade living area as predictor
-In the previous section , it wwas shown that the intercept was not significant, therefore a no- intercept model is fit. Below are the results. The no intercept model seem to have a better Adjusted R-Squared value 0.94; however, there is no practical implication of this fit. When the residual plots are compared with the previous model, the kutosis of the residuals has increased, but the bullhorn pattern still remains. 
+In the previous section , it was shown that the intercept was not significant, therefore a no- intercept model is fit. Below are the results. The no intercept model seem to have a better Adjusted R-Squared value of 0.94; however, there is no practical implication of this fit. When the residual plots are compared with the previous model, the kutosis of the residuals has increased, but the bullhorn pattern still remains. 
 
 ```{r SLR0intercept, echo=F,warning=F,message=F,tidy=T,fig.cap="No intercept model"}
 # No intercept model
@@ -245,7 +245,7 @@ plot(ResdfNI$GrLivArea,ResdfNI$.resid,main = "Residuals vs Living Area", xlab = 
 \pagebreak
   
 ### 4.2 Simple linear regression with Total Basement area as predictor
-The results of a simple linear model with Total basement area as predictor is shown below. The sum of squares error is much greater than the one with living area as predictor. Making basment area a poor predictor. While the model diagnostics pass the normality tests, but is not homoscedastic as the variance increases at higher basement area. Moreover, the residuals are within +/- 200,000 dollars. Therefore the model cannot be used in practice.
+The results of a simple linear model with Total basement area as predictor is shown below. The sum of squares error is much greater than the one with living area as predictor. Making basment area a poor predictor. While the model diagnostics pass the normality tests, but is not homoscedastic as the variance increases at higher basement area. Moreover, the residuals are within +/- 120,000 dollars (2 sigma level or 95 out of 100 times). Which means the estimation of home price could be off by upto 120,000 dollars 95 out of 100 of instances of estimation. Therefore the model cannot be used in practice.
 
 ```{r SLRBasement, echo=F,warning=F,message=F,tidy=T,fig.cap="Simple Linear Regression - Total Basement Area as predictor"}
 SLR_BsmtArea <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF)
@@ -264,12 +264,11 @@ plot(ResdfBsmt$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement 
 ```  
 
 
-\pagebreak
 
 ## 5. Multiple linear regression model
 
 The below results is of multiple linear model fit on the training data with both the above grade area and the total basment area as predictors.
-The model has an adjusted R-squared of 70% and the residuals seem to fairly follow the normal distribution with mean zero. The residuals are random. With this model, we are likely (95% of the time) to be estimating sale price with an error of =/- $86000. From a practical use perspective, this model needs improvement. 
+The model has an adjusted R-squared of 70% and the residuals seem to fairly follow the normal distribution with mean zero. The residuals are random. With this model, we are likely (95% of the time) to be estimating sale price with an error of =/- $86000 (44% of mean Sale price or 48% of median sale price). From a practical use perspective, this model needs improvement. 
 
 ```{r MLR, echo=F, warning=F,message=F,tidy=T, fig.cap= "Multiple Linear regression"}
 MLR <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF + GrLivArea)
@@ -285,13 +284,137 @@ qqnorm(MLR_Model$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
 qqline(MLR_Model$.resid)
 plot(MLR_Model$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
 plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
-anova(SLR_LivingArea_NoIntercept,SLR_BsmtArea)
-# anova(SLR_LivingArea_NoIntercept,SLR_BsmtArea,MLR)
-```
+```  
+
+### 5.1 Model comparisons
+
+In section 4, it was seen that the no-intercept model had a better fit compared to the one with intercept when above grade living area was used as the predictor. It was seen that the sum of square errors of the model with living area as predictor was less than that of the model with total basement area as the predictor. The adjusted R-Squared value of the no-intercept model with living area as the predictor was 94%. In this section the multiple linear regression model is compared with the linear regression models. <br>
+  
+The approach used to compare the models is F test for nested models. It is hypothesized that the regression coefficient of the additional parameter in the model is zero. Thereby, hypothesizing that the additional parameter has no significant contribution towards explaining the variation in the response variable. 
+
+
+### 5.2 Nested model comparison.
+
+The ANOVA table below compares the Reduced Model(RM) SalePrice ~ GrLivArea to the Full Model(FM) SalePrice ~ TotalBsmtSF + GrLivArea. It is seen that the regression coefficient of total basement is statistically significant at 95% significance level. Hence the FM is warranted.
+
+```{r NestedModel, echo=F,warning=F,message=F,tidy=T,fig.cap="Nested Model"}
+anova(SLR_LivingArea_NoIntercept,MLR)
+```  
+  
+  
+Further, RM of SalePrice ~ TotalBsmtSF is tested againt the FM of SalePrice ~ TotalBsmtSF + GrLivArea. In the below ANOVA table it is seen that the regression coefficient of the additional parameter in the FM is statistically significant at 95% significance level. Also it is seen in Figure 8 that the residuals are more random in the multiple linear regression model than that for simple linear regression models (Figure 6 and Figure 7). Hence the FM is deemed better than the RM.
+
+```{r NestedModel_2, echo=F,warning=F,message=F,tidy=T,fig.cap="Nested Model"}
+anova(SLR_BsmtArea,MLR)
+```  
+  
+## 6. Regression models for transformed response - log(SalePrice)
+
+Logarithimic transformations of variables help with handling distributions that have heavy tails by normalizing them. In this section we will explore if modelling the logarithmic transformation of SalePrice makes the regression models better. <br>
+  
+### 6.1 Comparison of Regressions of log(SalePrice) by Living Area Vs SalePrice by Living Area
+
+It is seen from figure 9 and 10 that for the simple linear regression with the Living area as the predictor, the logarithmic transformation has not yielded a practical difference. The residuals look more normal and the variance inflation with increase in living area has been addressed by the transformation, however the model has yielded very little practical significance.
+
+```{r LogTransormations, echo=F,message=F,warning=F,tidy=T,fig.cap="Simple linear regression of Log(SalePrice) by above grade living area"}
+SLR_LivingArea_Log <- lm(data = trainFiltered,LogSalePrice ~ GrLivArea)
+print(summary(SLR_LivingArea_Log), caption = 'ANOVA Simple Linear Regression of LogSalePrice by Above grade living area')
+
+# Model diagnostics
+# Tidy store of model results
+RedDf_Log <- broom::augment(SLR_LivingArea_Log)
+# Plot of residuals
+layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+hist(RedDf_Log$.resid, main = "Histogram of residuals (Tranformed)", xlab = "Residuals")
+qqnorm(RedDf_Log$.resid,title = "Normal Q-Q plot of residuals (Log Sale Price)")
+qqline(RedDf_Log$.resid)
+plot(RedDf_Log$GrLivArea,RedDf_Log$.resid,main = "Residuals (Transformed) vs Living Area", xlab = "Above grade living area", ylab = "Residuals")
+```  
 
 \pagebreak
 
+```{r reshowplot, echo=F,warning=F,message=F,tidy=T,fig.cap="Linear regression of SalePrice by above grade living area"}
+layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+hist(ResdfNI$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(ResdfNI$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(ResdfNI$.resid)
+plot(ResdfNI$GrLivArea,ResdfNI$.resid,main = "Residuals vs Living Area", xlab = "Above grade living area", ylab = "Residuals")
+```  
 
+### 6.2 Comparison of Regressions of log(SalePrice) by Total basement area Vs SalePrice by Total basement area
+
+The log(SalePrice) when regressed by total basment area, yields a better model relative to the regression of non-transformed sale price. The Adjusted R suared are approximately the same for both the models and the residuls of the model with transformation meets the normality and homoscedastic assumption as much as the non-transformed model. The adjusted R squared of 70% is good, however as mentioned above, this model needs improvement.
+
+```{r LogTransBsmtSF, echo=F,warning=F,message=F,tidy=T,fig.cap="SLR log(SalePrice) by Total basement area"}
+SLR_BsmtArea_Log <- lm(data = trainFiltered,LogSalePrice ~ TotalBsmtSF)
+print(summary(SLR_BsmtArea_Log), caption = 'ANOVA Simple Linear Regression Log(SalePrice) vs Total basment area')
+
+# Model diagnostics
+# Tidy store of model results
+ResdfBsmt_Log <- broom::augment(SLR_BsmtArea_Log)
+# Plot of residuals
+layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+hist(ResdfBsmt_Log$.resid, main = "Histogram of residuals - log(SalePrice)", xlab = "Residuals")
+qqnorm(ResdfBsmt_Log$.resid,title = "Normal Q-Q plot of residuals log(Sale Price)")
+qqline(ResdfBsmt_Log$.resid)
+plot(ResdfBsmt_Log$TotalBsmtSF,ResdfBsmt_Log$.resid,main = "Residuals (log(SalePrice)) vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+```  
+
+
+
+```{r reshowBsmt, echo=F,warning=F,message=F,tidy=T,fig.cap="Simple Linear Regression - Total Basement Area as predictor"}
+# Model diagnostics
+# Tidy store of model results
+ResdfBsmt <- broom::augment(SLR_BsmtArea)
+# Plot of residuals
+layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+hist(ResdfBsmt$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(ResdfBsmt$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(ResdfBsmt$.resid)
+plot(ResdfBsmt$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+```  
+\pagebreak
+
+
+### 6.3 Multiple linear regression of Sale Price and log(Sale Price) by Basement area and above grade living area
+
+It is seen from the ANOVA table and figures 12 and 13 that the logarithmic transformation has not provided us with a significant advantage from a practical perspective, The normality and homoscedastisity assumption was satisfied reasonable in both models. Therefore no transformation is recommended for this model.
+
+```{r MLRLog, echo=F,warning=F,message=F,tidy=T,fig.cap="Multiple Linear regression of log(Sale Price)"}
+MLR_log <- lm(data = trainFiltered,LogSalePrice ~ TotalBsmtSF + GrLivArea)
+print(summary(MLR_log), caption = 'ANOVA Multiple Linear Regression Total basment area')
+
+# Model diagnostics
+# Tidy store of model results
+MLR_Model_log <- broom::augment(MLR_log)
+# Plot of residuals
+layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
+hist(MLR_Model_log$.resid, main = "Histogram of residuals log(SalePrice)", xlab = "Residuals")
+qqnorm(MLR_Model_log$.resid,title = "Normal Q-Q plot of residuals log(Sale Price)")
+qqline(MLR_Model_log$.resid)
+plot(MLR_Model_log$TotalBsmtSF,MLR_Model_log$.resid,main = "Residuals-log(Sale Price) vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+plot(MLR_Model_log$GrLivArea,MLR_Model_log$.resid,main = "Residuals-log(Sale Price) vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
+
+```
+
+```{r MLRComp, echo=F,warning=F,message=F,tidy=T,fig.cap="Multiple Linear regression - SalePrice"}
+# Plot of residuals
+layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
+hist(MLR_Model$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(MLR_Model$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(MLR_Model$.resid)
+plot(MLR_Model$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
+```  
+
+## 7. Conclusion
+
+A multiple linear regression model with Total basement area and above grade living area explains 70% of the variation in Sales Price of typical homes in Ames, Iowa. It is formulated as Sale Price = 84.11(Total Basement Area) + 97.6(Above Grade Living Area) - 50244.02. The model meet it's statistical assumptions. However, from the perspective of practical use of this model, the prediction could be off by $86,000; which is 49% of median Sale Price of the sample of typical houses. The model needs improvement.
+
+
+
+\pagebreak
+ 
 \appendix
 \begin {center}
 \section {APPENDIX}
