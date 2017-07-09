@@ -13,7 +13,14 @@ knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=60),tidy=TRUE)
 
 ## 1. Introduction
 
-This report discusses linear regression models and the model generation proces, for estimating or predicting the sales price of "typical" homes in Ames, Iowa. The models were limited only two predictor variables. Total basement area and above grade living area (sometimes referred as living area in this report) were found to be good candidates for predicting sale price of typical homes. The model was formulated as Sale Price = 84.11(Total Basement Area) + 97.6(Above Grade Living Area) - 50244.02. The model explains 70% of the variation in Sale Price. But is limited in application due to prediction errors ranging up to +/- $ 86,000 (+/- 2 standard deviation of residuals).
+This report discusses linear regression models and the model generation proces, for estimating or predicting the sales price of "typical" homes in Ames, Iowa. The following were deemed good predictors :
+1. Above grade living area - Continuous variable
+2. Total basment area - Continuous variable
+3. Total Bathrooms - Continuous variable
+4. Lot Area - Continuous variable
+5. Neighborhood Tiers - Discrete. (Neighborhoods grouped into tiers, refer section 6.1)
+Several models were fit and their goodness of fit were assessed and their performances were compared. The model ***Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4*** was found to be better performing with Mean Absolute Error (MAE) of $21,524.
+
 
 ```{r Read data, echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
 ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
@@ -503,13 +510,21 @@ pander::pandoc.table(CompariosnComplex,caption = "Comparison of MLR models of Sa
 ```
 The transformation of response variable is useful when there is explicit patterns or non-randomness in the residuals. Transformation reduces hetroscedasticity. Which is evident in the model performance results below. However, we do see outliers in the predictor "Lot Area". It'll be useful to log transform lot area and fit the model again.  
 
-\linebreak
+### 7.3. Transformation of Lot Area (Predictor)
 
-```{r, echo=F, warning=F, message=F, tidy=T, fig.cap='Transformed Lot area (predictor) & Sale Price (Response)'}
+To address the skewness in Lot Area, the lot area was logarithmically transformed and a multiple linear regression model was fit. Below are the results of the model ***Log(Sale Price) = 4.716e+00 + TotalBsmtSF*1.037e-04 + GrLivArea*1.181e-04 + log(LotArea)*7.309e-02 + TotalBath*2.847e-02 - Tier1*2.180e-01 - Tier2*1.654e-01 - Tier3*9.951e-02 - Tier4*3.200e-02***. It is seen that the partial regression coefficients are stastically significant at 95% significance and so is regression effect with F statistic at 812. The residuals are skewed left, but is fairly normal and they show a funnel shape behavior with Lot area. <br>
+
+The model performance is compared with other models from sections 7, 7.1 and 7.2 below.
+
+```{r, echo=F, warning=F, message=F, tidy=T, fig.cap='Transformed Lot area (predictor) & Sale Price (Response)',fig.height=5}
 
 ComplexModel_log_lot <- lm(data = trainFiltered,LogSalePrice ~ TotalBsmtSF + GrLivArea + logLotArea + TotalBath + Tier1 + Tier2 + Tier3 + Tier4)
 summary(ComplexModel_log_lot)
 ComplexModel_log_lot_data <- broom::augment(ComplexModel_log_lot)
+FtestsComplexModel_log_lot <- broom::glance(ComplexModel_log_lot)
+ComplexModel_log_lot_data$SalePrice <- trainFiltered$SalePrice
+ComplexModel_log_lot_data$AntiLogFitted <- 10^(ComplexModel_log_lot_data$.fitted)
+MAE_Complex_log_lot <- mean(abs(ComplexModel_log_lot_data$SalePrice - ComplexModel_log_lot_data$AntiLogFitted))
 layout(matrix(c(1,2,3,4,5,6,7,8,9), 3, 3, byrow = TRUE))
 qqnorm(ComplexModel_log_lot_data$.resid)
 qqline(ComplexModel_log_lot_data$.resid)
@@ -521,14 +536,24 @@ plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier1, x
 plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier2, xlab = 'Tier 2 Neighborhood', ylab= 'Residuals')
 plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier3, xlab = 'Tier 3 Neighborhood', ylab= 'Residuals')
 plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier4, xlab = 'Tier 4 Neighborhood', ylab= 'Residuals')
+
+ComplexModels <- c("SalePrice = 7.17e+04 + 5.681e+01*TotalBsmtSF + 6.3e+01*GrLivArea + 8.22e-01*LotArea + 1.11e+04*TotalBath - 1.14e+05*Tier1 - 9.57e+04*Tier2 - 7.44e+04*Tier3 - 2.9e+04* Tier4","Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4",'Log(Sale Price) = 4.716e+00 + TotalBsmtSF*1.037e-04 + GrLivArea*1.181e-04 + log(LotArea)*7.309e-02 + TotalBath*2.847e-02 - Tier1*2.180e-01 - Tier2*1.654e-01 - Tier3*9.951e-02 - Tier4*3.200e-02')
+ComplexMAEs <- c(MAE_Complex,MAE_Complex_log,MAE_Complex_log_lot)
+ComplexRSquared <- c(FtestsComplexModel$adj.r.squared,FtestsComplexModel_log$adj.r.squared,FtestsComplexModel_log_lot$adj.r.squared)
+ComplexFstat <- c(FtestsComplexModel$statistic, FtestsComplexModel_log$statistic,FtestsComplexModel_log_lot$statistic)
+ComplexPvalues <- c(FtestsComplexModel$p.value,FtestsComplexModel_log$p.value,FtestsComplexModel_log_lot$p.value)
+CompariosnComplex <- data.frame(ComplexModels,ComplexMAEs,ComplexRSquared,ComplexFstat,ComplexPvalues)
+colnames(CompariosnComplex) <- c("Model","MAE","Adj.R^2","F.Stat","P.Value")
+pander::pandoc.table(CompariosnComplex,caption = "Comparison of MLR models of Sale Price and Log(Sale Price)")
 ```
 
+It is seen that the transformation of lot area does not provide us with significant advantage and performs more like the non-transformed predictor model. 
 
 
 
 ## 8. Conclusion
 
-A multiple linear regression model with Total basement area and above grade living area explains 70% of the variation in Sales Price of typical homes in Ames, Iowa. It is formulated as Sale Price = 84.11(Total Basement Area) + 97.6(Above Grade Living Area) - 50244.02. The model meet it's statistical assumptions. However, from the perspective of practical use of this model, the prediction could be off by $86,000; which is 49% of median Sale Price of the sample of typical houses. The model needs improvement.
+Several Multiple linear regression models were fit for predicting sales price of typical homes in Ames Iowa. The models' goodness of fit was evaluated by rigrously checking the assumptions of the model by evaluating the residuals. Transformations of sale price were made to arrive at a better model. Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4 was deemed a better model with Mean Absolute Error (MAE) of $21,524. The model has a adjusted R squared value of 82%.
 
 
 
