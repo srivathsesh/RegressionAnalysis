@@ -384,8 +384,15 @@ tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 a
 The neighborhoods are grouped into 5 tiers. Tier 5 is base category.  
 `r knitr::kable(tierdf,caption = "Neighborhood classification")`
 
+\pagebreak
+
 ### 6.2 Neighborhood categories inclusion as predictors.
-```{r MLR Neighborhood, echo=F,warning=F,message=F,tidy=T}
+
+The tiers 1 throught 4 were included as additional predictors into the multiple linear regression model discussed in section 5. The fit for the model  ***Sale Price = 85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4*** is shown below in figure 11. The regression coefficients are statistically significant and so is the overall regression effect with P-value of 0.000.  
+
+It can be seen the from the table below comparing the model in section 5 to the current model, that Sale Price = 85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4 is a better model with much lower MAE (24650 vs 29905) and adjusted R squared at 79%. The funnel chape in the residuals is stll seen. It would be useful to employ transformations to the response variable 
+
+```{r MLR Neighborhood, echo=F,warning=F,message=F,tidy=T, fig.cap = "Multiple linear regressions with Neighborhood tiers as predictors"}
 MLR_Neighborhoods <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF + GrLivArea + Tier1 + Tier2 + Tier3 + Tier4)
 summary(MLR_Neighborhoods)
 MLR_Neighborhoods_data <- broom::augment(MLR_Neighborhoods)
@@ -397,7 +404,16 @@ qqnorm(MLR_Neighborhoods_data$.resid,title = "Normal Q-Q plot of residuals (Sale
 qqline(MLR_Neighborhoods_data$.resid)
 plot(MLR_Neighborhoods_data$TotalBsmtSF,MLR_Neighborhoods_data$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
 plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
+# Model comparison
+Models_Neighborhood <- c("-502244.02 + 84.11 * TotalBsmtSF + 97.608 * GrLivArea",'85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4')
+MAE_comparison <- c(round(mean(abs(MLR_Model$.resid)),2),round(mean(abs(MLR_Neighborhoods_data$.resid)),2))
+MSres_Neighborhood <- c(round(FtestsMLR$sigma,2),round(FtestsMLR_neighborhoods$sigma,2))
+Adj_R_Squared_Neighborhood <- c(round(FtestsMLR$adj.r.squared,2),round(FtestsMLR_neighborhoods$adj.r.squared,2))
 
+Comparisondf_Neighborhood <- cbind(Models_Neighborhood,MAE_comparison,MSres_Neighborhood,Adj_R_Squared_Neighborhood)
+colnames(Comparisondf_Neighborhood) <- c("Model","MAE","MSres","Adj R^2")
+# print table
+pander::pandoc.table(Comparisondf_Neighborhood,caption = "Model comparison")
 ```
 
 ## 7. Conclusion
