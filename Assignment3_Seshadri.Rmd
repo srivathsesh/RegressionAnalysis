@@ -293,7 +293,7 @@ layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
 hist(MLR_Model$.resid, main = "Histogram of residuals", xlab = "Residuals")
 qqnorm(MLR_Model$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
 qqline(MLR_Model$.resid)
-plot(MLR_Model$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+plot(MLR_Model$TotalBsmtSF,MLR_Model$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
 plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
 ```  
 
@@ -327,7 +327,7 @@ Since the residuals are exhibiting funnel shapped patterns, the models above are
   
 ## 6. Neighborhood Accuracy
 
-If residuals of the model show structure or pattern when plotted against omitted variable in the model, then the omitted variable could be a potential predictor that may be added to the model. Figure 9 shows that there is a structure between residuals and neighborhood. This affirms the conclusion during EDA of sales price by neighborhood. (refer page 2 of https://github.com/srivathsesh/RegressionAnalysis/blob/master/Assignment1_Seshadri.pdf). The Sawyer and Bloomington Neighborhoods are better predicted. In Figure 9, the neighborhoods below the red lines are over predicted and the neighborhoods above the blue lines are under predicted.
+If residuals of the model show structure or pattern when plotted against omitted variable in the model, then the omitted variable could be a potential predictor that may be added to the model. Figure 9 shows that there is a structure between residuals and neighborhood. This affirms the conclusion during EDA of sales price by neighborhood. (refer page 2 of https://github.com/srivathsesh/RegressionAnalysis/blob/master/Assignment1_Seshadri.pdf). The Sawyer and Bloomington Neighborhoods are better predicted. In Figure 9, the neighborhoods below the red lines are over predicted and the neighborhoods above the blue lines are under predicted. Note that the standardized residuals are plotted for easier grouping of neighborhoods.
 
 
 ```{r Neighborhood Accuracy, echo=F, warning=F, message=F,tidy=T,fig.cap="Standardized residuals Vs Neighborhood",fig.height=4}
@@ -345,15 +345,60 @@ MLR_Model$SQFTNoBsmt <- trainFiltered$SQFTNoBsmt
 p <- ggplot(MLR_Model, mapping = aes(x = fct_reorder(Neighborhood,.std.resid), y= .std.resid, color = Neighborhood,guides(color = F)))
 residboxplot <- p + geom_boxplot() + coord_flip() + theme_bw() + scale_colour_discrete(guide = FALSE)
 residboxplot + geom_hline(yintercept = c(-1,0,1) , linetype = 'solid',color = 'grey') + geom_vline(xintercept = c(9.5,11.5), linetype = 'dashed',color =c('red','blue') ) + ylab("Standardized residuals") + xlab("Neighborhood") 
+
+```
+
+### 6.1 Effect of Neighborhood's mean price per square foot on Mean Absolute Error (MAE)
+
+Figure 10, shows the effect of mean price per square foot on Mean Absolute Error (MAE). It can be seen that the MAE is inflated at the lower end of the spectrum of price per square foot; giving it a non-linear pattern. Therefore it would be useful to include the effect of price per suare foot into the model. We also see that the price per square foot is related to the neighborhood. One way to include the effect of price per square foot in the model is to categorize the neighborhoods by price per square foot and use the categories as predictor variables. 
+
+
+```{r MAE,echo=F,message=F,warning=T,tidy=T,fig.cap = 'Effect on MAE by Neighbood ($/Square foot)'}
 # MAE by neighborhood
+MAE_Neighborhood <- MLR_Model %>% 
+  group_by(Neighborhood) %>% 
+  summarise(MAE = mean(abs(.resid)),TotalSalePrice = sum(SalePrice), TotalLivArea = sum(GrLivArea), Tot.sqft = sum(TotalSQFT)) %>% 
+  mutate(MeanPricePerSqft = TotalSalePrice/TotalLivArea) %>% 
+  mutate(MeanPricePerSqft2 = TotalSalePrice/Tot.sqft)
+ 
+p1 <- ggplot(data = MAE_Neighborhood, mapping = aes(x = MeanPricePerSqft2, y = MAE)) + geom_point() +  theme_bw() + xlab("Mean $/Sq.ft") + geom_smooth()
+p2 <- ggplot(data = MAE_Neighborhood, mapping = aes(x = fct_reorder(Neighborhood,MeanPricePerSqft2), y = MeanPricePerSqft2)) + geom_point() + coord_flip() + theme_bw() + geom_hline(yintercept = c(60,70,80,90),linetype = "dashed", color = "red") + xlab("Neighborhood") + ylab("Mean $/Sq.ft")
+grid.arrange(p1,p2,ncol=2)
+
+# Grouping Neighborhoods
+Less60Neigh <- MAE_Neighborhood$Neighborhood[which(MAE_Neighborhood$MeanPricePerSqft2 <= 60)]
+Bet60_70 <-  MAE_Neighborhood$Neighborhood[which(MAE_Neighborhood$MeanPricePerSqft2 <= 70 & MAE_Neighborhood$MeanPricePerSqft2 > 60 )]
+Bet70_80 <-  MAE_Neighborhood$Neighborhood[which(MAE_Neighborhood$MeanPricePerSqft2 <= 80 & MAE_Neighborhood$MeanPricePerSqft2 > 70 )]
+Bet80_90 <-   MAE_Neighborhood$Neighborhood[which(MAE_Neighborhood$MeanPricePerSqft2 <= 90 & MAE_Neighborhood$MeanPricePerSqft2 > 80)]
+Greater_90 <-   MAE_Neighborhood$Neighborhood[which(MAE_Neighborhood$MeanPricePerSqft2 > 90)]
+
+trainFiltered$Tier1 <- ifelse(trainFiltered$Neighborhood %in% Less60Neigh,1,0)
+trainFiltered$Tier2 <- ifelse(trainFiltered$Neighborhood %in% Bet60_70,1,0)
+trainFiltered$Tier3 <- ifelse(trainFiltered$Neighborhood %in% Bet70_80, 1,0)
+trainFiltered$Tier4 <- ifelse(trainFiltered$Neighborhood %in% Bet80_90, 1,0)
+trainFiltered$Tier5 <- ifelse(trainFiltered$Neighborhood %in% Greater_90, 1,0)
+
+tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90", " > 90"))
+```
+
+The neighborhoods are grouped into 5 tiers. Tier 5 is base category.  
+`r knitr::kable(tierdf,caption = "Neighborhood classification")`
+
+### 6.2 Neighborhood categories inclusion as predictors.
+```{r MLR Neighborhood, echo=F,warning=F,message=F,tidy=T}
+MLR_Neighborhoods <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF + GrLivArea + Tier1 + Tier2 + Tier3 + Tier4)
+summary(MLR_Neighborhoods)
+MLR_Neighborhoods_data <- broom::augment(MLR_Neighborhoods)
+FtestsMLR_neighborhoods <- broom::glance(MLR_Neighborhoods)
+# Plot of residuals
+layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
+hist(MLR_Model$.resid, main = "Histogram of residuals", xlab = "Residuals")
+qqnorm(MLR_Neighborhoods_data$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
+qqline(MLR_Neighborhoods_data$.resid)
+plot(MLR_Neighborhoods_data$TotalBsmtSF,MLR_Neighborhoods_data$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
+plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
 
 ```
-### 6.1 
-```{r}
-
-```
-
-
 
 ## 7. Conclusion
 
