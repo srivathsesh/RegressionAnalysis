@@ -426,6 +426,10 @@ From the exploratory analysis in section 3.1 and exploratory analysis on categor
 4. Lot Area - Continuous variable
 5. Neighborhood Tiers - Discrete. (Neighborhoods grouped into tiers, refer section 6.1)
 
+The below table shows the results of multiple linear regression model **SalePRice = 7.17e+04 + 5.681e+01*TotalBsmtSF + 6.3e+01*GrLivArea + 8.22e-01*LotArea + 1.11e+04*TotalBath - 1.14e+05*Tier1 - 9.57e+04*Tier2 - 7.44e+04*Tier3 - 2.9e+04* Tier4** using the above predictors. All the partial regression coefficients are statistically significant at 95% significance level (P value <<< 0.05). The overall regression effect is also statistically significant with F statistic = 702 and adjusted R squared at 80%. <br>
+
+The residuals continue to show systemic funnel pattern when plotted against basement area, total living area and total rooms. The residuals are not strictly normal and is left skewed. 
+
 ```{r TranformMOdel, warning=F,echo=F,message=F,tidy=T,fig.cap='Multiple linear regression of Saleprice with categorical and continuous variables'}
 # trainFiltered$KitchenQual <- as.factor(trainFiltered$KitchenQual)
 # trainFiltered$NeighRecode <- as.integer(as.factor(trainFiltered$Neighborhood))
@@ -436,14 +440,21 @@ From the exploratory analysis in section 3.1 and exploratory analysis on categor
 trainFiltered$logLotArea <- log10(trainFiltered$LotArea)
 ComplexModel <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF + GrLivArea + LotArea + TotalBath + Tier1 + Tier2 + Tier3 + Tier4)
 summary(ComplexModel)
-ComplexModel_Data1 <- broom::augment(ComplexModel)
-ComplexModel_Data <- ComplexModel_Data1 %>% filter(LotArea < 100000)
+ComplexModel_Data <- broom::augment(ComplexModel)
 qqnorm(ComplexModel_Data$.resid)
-plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$LotArea)
-plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$TotalBsmtSF)
-plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$GrLivArea)
-plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$TotalBath)
+plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$LotArea, xlab = 'Lot Area', y= 'Residuals')
+plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$TotalBsmtSF, xlab = 'Total basement area', y= 'Residuals')
+plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$GrLivArea, xlab = 'Above grade living area', y= 'Residuals')
+plot(y = ComplexModel_Data$.resid, x = ComplexModel_Data$TotalBath, xlab = 'Total bathrooms', y= 'Residuals')
+plot(y =ComplexModel_Data$.resid, x = ComplexModel_Data$Tier1, xlab = 'Tier 1 Neighborhood', y= 'Residuals')
+plot(y =ComplexModel_Data$.resid, x = ComplexModel_Data$Tier2, xlab = 'Tier 2 Neighborhood', y= 'Residuals')
+plot(y =ComplexModel_Data$.resid, x = ComplexModel_Data$Tier3, xlab = 'Tier 3 Neighborhood', y= 'Residuals')
+plot(y =ComplexModel_Data$.resid, x = ComplexModel_Data$Tier4, xlab = 'Tier 4 Neighborhood', y= 'Residuals')
 
+```
+
+
+```{r}
 ComplexModel_log <- lm(data = trainFiltered,LogSalePrice ~ TotalBsmtSF + GrLivArea + LotArea + TotalBath + Tier1 + Tier2 + Tier3 + Tier4)
 summary(ComplexModel_log)
 ComplexModel_log_data <- broom::augment(ComplexModel_log)
@@ -452,10 +463,11 @@ plot(y = ComplexModel_log_data$.resid, x = ComplexModel_log_data$TotalBsmtSF)
 plot(y = ComplexModel_log_data$.resid, x = ComplexModel_log_data$GrLivArea)
 plot(y = ComplexModel_log_data$.resid, x = ComplexModel_log_data$TotalBath)
 
-ComplexModel_log_lot <- lm(data = trainFiltered,LogSalePrice ~ TotalBsmtSF + GrLivArea + LogLotArea + TotalBath + Tier1 + Tier2 + Tier3 + Tier4)
+ComplexModel_log_lot <- lm(data = trainFiltered,LogSalePrice ~ TotalBsmtSF + GrLivArea + logLotArea + TotalBath + Tier1 + Tier2 + Tier3 + Tier4)
 summary(ComplexModel_log_lot)
-
+ComplexModel_log_lot_data <- broom::augment(ComplexModel_log_lot)
 ```
+
 
 
 ## 8. Conclusion
