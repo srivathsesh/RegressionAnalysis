@@ -19,7 +19,7 @@ This report discusses linear regression models and the model generation proces, 
 3. Total Bathrooms - Continuous variable
 4. Lot Area - Continuous variable
 5. Neighborhood Tiers - Discrete. (Neighborhoods grouped into tiers, refer section 6.1)
-Several models were fit and their goodness of fit were assessed and their performances were compared. The model ***Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4*** was found to be better performing with Mean Absolute Error (MAE) of $21,524.
+Several models were fit and their goodness of fit were assessed and their performances were compared. The model ***Log(Sale Price) = 4.979e+00 + 1e-04(TotalBsmtSF) + 1.236e-04(GrLivArea) + 1.251e-06(LotArea) + 2.809e-02(TotalBath) - 2.160e-01(Tier1) - 1.585e-01(Tier2) - 9.391e-02(Tier3) - 2.740e-02(Tier4)*** was found to be better performing with Mean Absolute Error (MAE) of $21,524.
 
 
 ```{r Read data, echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
@@ -208,7 +208,7 @@ From the Exploratory Data analysis, it is seen that the above grade living area 
 
 ### 4.1 Simple linear regression model with "above grade living area"" as predictor
 
-The model fit results for a single linear regression model; **SalePrice = 7200.4 + 122.65 * AboveGradeLivingArea** is seen below. We fail to reject the null hypothesis of intercept = 0; at 95% significance level with t-statistic being 1.5. The overall F test for regression, shows the regression effect to be statistically significant with F statistic of 1712 (p value = 0.000). It would be appropriate to fit a no intercept model. From a goodness of fit perspective, the residuals are of mean 0 and distributed fairly normally based on "thick pen test" on Q-Q plot. However, the residulas are not homoscedastic, the residuals vs predictor have an open funnel shape, i.e. the varaition in the residuals increases as the living area increases. The model is not suitable.
+The model fit results for a single linear regression model; **SalePrice = 7200.4 + 122.65 * AboveGradeLivingArea** is seen below. We fail to reject the null hypothesis of intercept = 0; at 95% significance level with t-statistic being 1.5. The overall F test for regression, shows the regression effect to be statistically significant with F statistic of 1712 (p value = 0.000). It would be appropriate to fit a no intercept model. From a goodness of fit perspective (refer Figure 5), the residuals are of mean 0 and distributed fairly normally based on "thick pen test" on Q-Q plot. However, the residulas are not homoscedastic, the residuals vs predictor have an open funnel shape, i.e. the varaition in the residuals increases as the living area increases. The model is not suitable.
 
 ```{r SLR, echo=F,message=F,warning=F,fig.cap="Model diagnostics Sale Price ~ GrLivArea", tidy=T}
 options(scipen = 0)
@@ -236,7 +236,7 @@ plot(RedDf$GrLivArea,RedDf$.resid,main = "Residuals vs Living Area", xlab = "Abo
 \pagebreak
 
 ### 4.1.1 Non - intercept model with Above grade living area as predictor
-In the previous section , it was shown that the intercept was not significant, therefore a no-intercept model is fit. Below are the results of **SalePrice = 126.9 * GrLivArea **. The coefficient for slope (GrLivArea) is statistically significant with t-value of 146.8. The overall regression effect is statistically significant F statistic of 21550 (p value = 0.000) and has a better Adjusted R-Squared value of 0.94. When the residual plots are compared with the previous model, the kutosis of the residuals has increased, but the funnel pattern still remains. There is no practical implication of this fit.
+In the previous section , it was shown that the intercept was not significant, therefore a no-intercept model is fit. Below are the results of **SalePrice = 126.9 * GrLivArea **. The coefficient for slope (GrLivArea) is statistically significant with t-value of 146.8. The overall regression effect is statistically significant F statistic of 21550 (p value = 0.000) and has a better Adjusted R-Squared value of 0.94. When the residual plots(Figure 6) are compared with the previous model (Figure 5), the kutosis of the residuals has increased, but the funnel pattern still remains. There is no practical implication of this fit.
 
 ```{r SLR0intercept, echo=F,warning=F,message=F,tidy=T,fig.cap="No intercept model"}
 # No intercept model
@@ -260,7 +260,7 @@ plot(ResdfNI$GrLivArea,ResdfNI$.resid,main = "Residuals vs Living Area", xlab = 
 \pagebreak
   
 ### 4.2 Simple linear regression with Total Basement area as predictor
-The results of a simple linear model with Total basement area as predictor (** SalePrice = 47859.31 + 129.96 * TotalBsmtSF **) is shown below. The t-tests for statistical significance of regression coefficients prove the coefficients to be significant with t statistics for intercept and slope at 9.17 and 29.93 respectively. The overall F test for significance of regression effect shows the regression to be statistically significant with F statistic at 896.2 (p value = 0.0000). The sum of squares error (60230) is much greater than the one with living area as predictor. Making basment area a poor predictor. While the model diagnostics pass the normality tests, but is not homoscedastic as the variance increases at higher basement area. Moreover, the residuals are within +/- 120,000 dollars (2 sigma level or 95 out of 100 times). Which means the estimation of home price could be off by upto 120,000 dollars 95 out of 100 of instances of estimation. Therefore the model cannot be used in practice.
+The results of a simple linear model with Total basement area as predictor __(SalePrice = 47859.31 + 129.96 * TotalBsmtSF)__ is shown below. The t-tests for statistical significance of regression coefficients prove the coefficients to be significant with t statistics for intercept and slope at 9.17 and 29.93 respectively. The overall F test for significance of regression effect shows the regression to be statistically significant with F statistic at 896.2 (p value = 0.0000). The sum of squares error (60230) is much greater than the one with living area as predictor. Making basment area a poor predictor by itself. While the model diagnostics pass the normality tests, but is not homoscedastic as the variance increases at higher basement area. Moreover, the residuals are within +/- 120,000 dollars (2 sigma level or 95 out of 100 times). Which means the estimation of home price could be off by upto 120,000 dollars 95 out of 100 of instances of estimation. Therefore the model cannot be used in practice.
 
 ```{r SLRBasement, echo=F,warning=F,message=F,tidy=T,fig.cap="Simple Linear Regression - Total Basement Area as predictor"}
 SLR_BsmtArea <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF)
@@ -283,7 +283,7 @@ plot(ResdfBsmt$TotalBsmtSF,ResdfBsmt$.resid,main = "Residuals vs Total basement 
 
 ## 5. Multiple linear regression model
 
-The above simple linear regression models by themselves were not sufficient in modeling the sale price of typical homes. In this section we will explore multiple linear regression models with total basement area and above grage living area as predictors.   <br>
+The above simple linear regression models by themselves were not sufficient in modeling the sale price of typical homes. In this section we will explore multiple linear regression models with total basement area and above grade living area as predictors.   <br>
   
 Below are the goodness of fit results for the model SalePrice = **-502244.02 + 84.11 * TotalBsmtSF + 97.608 * GrLivArea** on the training set. The t-tests show that partial regression coefficients are statistically significant with P values = 0.000. Also the overall F test for regression effect, show the model to be statistically significant in explaining the variation in sale price with F statistic at 1579 (P value = 0.000). The model has an adjusted R-squared of 70% and the residuals seem to fairly follow the normal distribution with mean zero. However the tails of the distributions of the residuals are thicker. With this model, we are likely (95% of the time) to be estimating sale price with an error of =/- $86000 (44% of mean Sale price or 48% of median sale price). From a practical use perspective, this model needs improvement. 
 
@@ -308,7 +308,7 @@ plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xla
 
 In section 4, it was seen that the no-intercept model had a better fit compared to the one with intercept when above grade living area was used as the predictor. It was seen that the sum of square errors of the model with living area as predictor was less than that of the model with total basement area as the predictor. The adjusted R-Squared value of the no-intercept model with living area as the predictor was 94%. In this section the multiple linear regression model is compared with the linear regression models. <br>
   
-In the table below, the simple and multiple linear models are comapred. ***For all the models in the table below, the residuals exhibit a funnel shaped pattern when plotted against the predictors and they fairly meet normality by thick pen test on QQ plot. However the residuals have heavier tails, contributed by the variation at higher levels of the predictors. Note, that the total variance of the response variable is the same for all the models***. 
+In the table 4 below, the simple and multiple linear models are comapred. ***For all the models in the table below, the residuals exhibit a funnel shaped pattern when plotted against the predictors and they fairly meet normality by thick pen test on QQ plot. However the residuals have heavier tails, contributed by the variation at higher levels of the predictors. Note, that the total variance of the response variable is the same for all the models***. 
 
 
 ```{r Model Comparisons,echo=F,warning=F,message=F,tidy=T,fig.cap="Model Comparison table"}
@@ -320,17 +320,18 @@ P_Value <- c(round(FtestsSLR_GrLivArea$p.value,2),round(FTestsSLR_BsmtArea$p.val
 Adj_R_Squared <- c(round(FtestsSLR_GrLivArea$adj.r.squared,2),round(FTestsSLR_BsmtArea$adj.r.squared,2), round(FtestsMLR$adj.r.squared,2))
 Normality <- c("Satisfied thick pen test; heavy tails","Satisfied thick pen test; heavy tails","Satisfied thick pen test; heavy tails")
 ResidualPattern <- c("Funnel shaped", "Funnel shaped", "Funnel shaped")
+FigureRef <- c(6,7,8)
 # Comparisondf <- cbind(Models,MSres,F_Stat,P_Value,Adj_R_Squared,Normality,ResidualPattern)
 # colnames(Comparisondf) <- c("Model","MSres","F Stat","P Value", "Adj R^2", "Residuals Normality", "Residuals Pattern")
-Comparisondf <- cbind(Models,MSres,F_Stat,P_Value,Adj_R_Squared)
-colnames(Comparisondf) <- c("Model","MSres","F Stat","P Value", "Adj R^2")
+Comparisondf <- cbind(Models,MSres,F_Stat,P_Value,Adj_R_Squared,FigureRef)
+colnames(Comparisondf) <- c("Model","MSres","F Stat","P Value", "Adj R^2","Fig#_Reference")
 # print table
 knitr::kable(Comparisondf,caption = "Model comparison")
 # pander::pander(Comparisondf)
 ```
 
 
-Since the residuals are exhibiting funnel shapped patterns, the models above are not fit for application. ***The models either needs transformation of response variable (Sale Price) or additional predictor models***. See appendix A.2 for Nested model approach for comparing the simple linear and multiple linear regression models. In the next section, we will explore residuals of the Multiple linear regression with potential predictors that are not in the model.
+Since the residuals are exhibiting funnel shapped patterns, the models above are not fit for application. ***The models either needs transformation of response variable (Sale Price) or additional predictors***. See appendix A.2 for Nested model approach for comparing the simple linear and multiple linear regression models. In the next section, we will explore residuals of the Multiple linear regression with potential predictors that are not in the model.
   
 ## 6. Neighborhood Accuracy
 
@@ -388,7 +389,7 @@ trainFiltered$Tier5 <- ifelse(trainFiltered$Neighborhood %in% Greater_90, 1,0)
 tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90", " > 90"))
 ```
 
-The neighborhoods are grouped into 5 tiers. Tier 5 is base category.  
+The neighborhoods are grouped into 5 tiers. ***Tier 5 is base category***.  
 `r knitr::kable(tierdf,caption = "Neighborhood classification")`
 
 \pagebreak
@@ -396,8 +397,6 @@ The neighborhoods are grouped into 5 tiers. Tier 5 is base category.
 ### 6.2 Neighborhood categories inclusion as predictors.
 
 The tiers 1 throught 4 were included as additional predictors into the multiple linear regression model discussed in section 5. The fit for the model  ***Sale Price = 85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4*** is shown below in figure 11. The regression coefficients are statistically significant and so is the overall regression effect with P-value of 0.000.  
-
-It can be seen the from the table below comparing the model in section 5 to the current model, that Sale Price = 85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4 is a better model with much lower MAE (24650 vs 29905) and adjusted R squared at 79%. The funnel chape in the residuals is stll seen. It would be useful to employ transformations to the response variable. Which we will explore in the next section.
 
 ```{r MLR Neighborhood, echo=F,warning=F,message=F,tidy=T, fig.cap = "Multiple linear regressions with Neighborhood tiers as predictors"}
 MLR_Neighborhoods <- lm(data = trainFiltered,SalePrice ~ TotalBsmtSF + GrLivArea + Tier1 + Tier2 + Tier3 + Tier4)
@@ -411,14 +410,21 @@ qqnorm(MLR_Neighborhoods_data$.resid,title = "Normal Q-Q plot of residuals (Sale
 qqline(MLR_Neighborhoods_data$.resid)
 plot(MLR_Neighborhoods_data$TotalBsmtSF,MLR_Neighborhoods_data$.resid,main = "Residuals vs Total basement Area", xlab = "Total Basement area", ylab = "Residuals")
 plot(MLR_Model$GrLivArea,MLR_Model$.resid,main = "Residuals vs Living Area", xlab = "Living Area above grade", ylab = "Residuals")
+```
+
+\pagebreak
+
+It can be seen the from the table below comparing the model in section 5 to the current model, that Sale Price = 85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4 is a better model with much lower MAE (24650 vs 29905) and adjusted R squared at 79%. The funnel chape in the residuals is stll seen. It would be useful to employ transformations to the response variable. Which we will explore in the next section.
+
+```{r MLRComparison, echo=F,message=F,warning=F, tidy=T}
 # Model comparison
 Models_Neighborhood <- c("-502244.02 + 84.11 * TotalBsmtSF + 97.608 * GrLivArea",'85820 + 57.4 * TotalBsmtSF + 78.28*GrLivArea -1.2e+04*Tier1 -9.8e-04*Tier2 - 9.8e04*Tier3 - 2.97e04*Tier4')
 MAE_comparison <- c(round(mean(abs(MLR_Model$.resid)),2),round(mean(abs(MLR_Neighborhoods_data$.resid)),2))
 MSres_Neighborhood <- c(round(FtestsMLR$sigma,2),round(FtestsMLR_neighborhoods$sigma,2))
 Adj_R_Squared_Neighborhood <- c(round(FtestsMLR$adj.r.squared,2),round(FtestsMLR_neighborhoods$adj.r.squared,2))
-
-Comparisondf_Neighborhood <- cbind(Models_Neighborhood,MAE_comparison,MSres_Neighborhood,Adj_R_Squared_Neighborhood)
-colnames(Comparisondf_Neighborhood) <- c("Model","MAE","MSres","Adj R^2")
+MAEFigRef <- c(8,11)
+Comparisondf_Neighborhood <- cbind(Models_Neighborhood,MAE_comparison,MSres_Neighborhood,Adj_R_Squared_Neighborhood, MAEFigRef)
+colnames(Comparisondf_Neighborhood) <- c("Model","MAE","MSres","Adj R^2","Fig#_Reference")
 # print table
 pander::pandoc.table(Comparisondf_Neighborhood,caption = "Model comparison")
 ```
@@ -433,7 +439,7 @@ From the exploratory analysis in section 3.1 and exploratory analysis on categor
 4. Lot Area - Continuous variable
 5. Neighborhood Tiers - Discrete. (Neighborhoods grouped into tiers, refer section 6.1)
 
-The below table shows the results of multiple linear regression model **SalePRice = 7.17e+04 + 5.681e+01*TotalBsmtSF + 6.3e+01*GrLivArea + 8.22e-01*LotArea + 1.11e+04*TotalBath - 1.14e+05*Tier1 - 9.57e+04*Tier2 - 7.44e+04*Tier3 - 2.9e+04* Tier4** using the above predictors. All the partial regression coefficients are statistically significant at 95% significance level (P value <<< 0.05). The overall regression effect is also statistically significant with F statistic = 702 and adjusted R squared at 80%. <br>
+The below shows the results of multiple linear regression fit for __SalePRice = 7.17e+04 + 5.681e+01(TotalBsmtSF) + 6.3e+01(GrLivArea) + 8.22e-01(LotArea) + 1.11e+04(TotalBath) - 1.14e+05(Tier1) - 9.57e+04(Tier2) - 7.44e+04(Tier3) - 2.9e+04(Tier4)__ using the above predictors. All the partial regression coefficients are statistically significant at 95% significance level (P value <<< 0.05). The overall regression effect is also statistically significant with F statistic = 702 and adjusted R squared at 80%. <br>
 
 The residuals continue to show systemic funnel pattern when plotted against basement area, total living area and total rooms (Figure 12). The residuals are not strictly normal and is left skewed. It will be useful to fit the model against a transformed Sales price; i.e.log(Sale Price)
 
@@ -464,9 +470,11 @@ plot(y =ComplexModel_Data$.resid, x = ComplexModel_Data$Tier4, xlab = 'Tier 4 Ne
 
 ```
 
+\pagebreak
+
 ### 7.1. Transformed Sale price fit.
 
-A multiple linear regression model of logarthimically transformed Sale price is fit. Below are the results for the model ***Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4***. The partial regression coefficients are statistically signiticant at 95% significance, with P values <<< 0.05. The overall regression is signiticant with F statistic at 796. The Adjusted-R-Squared value is 82%. The residuals are more normal than the non-transformed sale price and the residuals do not have as much as a pattern like it did in the model without transformation of sale price.The residuals are less hetroscedastic. The models are comapred in the next section.
+A multiple linear regression model of logarthimically transformed Sale price is fit. Below are the results for the model __Log(Sale Price) = 4.979e+00 + 1e-04(TotalBsmtSF) + 1.236e-04(GrLivArea) + 1.251e-06(LotArea) + 2.809e-02(TotalBath) - 2.160e-01(Tier1) - 1.585e-01(Tier2) - 9.391e-02(Tier3) - 2.740e-02(Tier4)__. The partial regression coefficients are statistically signiticant at 95% significance, with P values <<< 0.05. The overall regression is signiticant with F statistic at 796. The Adjusted-R-Squared value is 82%. The residuals are more normal than the non-transformed sale price and the residuals do not have as much as a pattern like it did in the model without transformation of sale price.The residuals are less hetroscedastic. The models are comapred in the next section.
 
   
 ```{r TransformedModel, echo=F,warning=F,message=F,tidy=T,fig.cap='Multiple Linear Regression model of Log(Sale Price) with continuous and categorical predictors',fig.height=6}
@@ -489,14 +497,15 @@ plot(y =ComplexModel_log_data$.resid, x = ComplexModel_log_data$Tier1, xlab = 'T
 plot(y =ComplexModel_log_data$.resid, x = ComplexModel_log_data$Tier2, xlab = 'Tier 2 Neighborhood', ylab= 'Residuals')
 plot(y =ComplexModel_log_data$.resid, x = ComplexModel_log_data$Tier3, xlab = 'Tier 3 Neighborhood', ylab= 'Residuals')
 plot(y =ComplexModel_log_data$.resid, x = ComplexModel_log_data$Tier4, xlab = 'Tier 4 Neighborhood', ylab= 'Residuals')
-
-```
-
+``` 
 \pagebreak
+
+### 7.1.1 Transformed model interpretation
+The regression model Log(Sale Price) = 4.979e+00 + 1e-04(TotalBsmtSF) + 1.236e-04(GrLivArea) + 1.251e-06(LotArea) + 2.809e-02(TotalBath) - 2.160e-01(Tier1) - 1.585e-01(Tier2) - 9.391e-02(Tier3) - 2.740e-02(Tier4) is a model for predicting the *logarithmic* value of sales price. The predicted value is in logarithmic scale of dollars. The exponent or antilog of the fitted values need to be calculated for the actual prediction or fitted value.
 
 ### 7.2 Model comparison of Multiple linear regression models of Sale Price and Log(Sale price)
 
-The below table shows the multiple linear models fitted in the above sections 7 and 7.1. It is seen that the log transformation of sale price yields a better model with Mean Absolute Error (MAE) of $21,524 and 82% adjusted R squared. The residuals are relatively more random in the log transformed model (Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4). <br>
+The below table shows the multiple linear models fitted in the above sections 7 and 7.1. It is seen that the log transformation of sale price yields a better model with Mean Absolute Error (MAE) of $21,524 and 82% adjusted R squared. The residuals are relatively more random in the log transformed model (Log(Sale Price) = 4.979e+00 + 1e-04(TotalBsmtSF) + 1.236e-04(GrLivArea) + 1.251e-06(LotArea) + 2.809e-02(TotalBath) - 2.160e-01(Tier1) - 1.585e-01(Tier2) - 9.391e-02(Tier3) - 2.740e-02(Tier4) ). <br>
 
 ```{r ComplexMOdel Comparison, echo=F,warning=F,message=F,tidy=T}
 ComplexModels <- c("SalePrice = 7.17e+04 + 5.681e+01*TotalBsmtSF + 6.3e+01*GrLivArea + 8.22e-01*LotArea + 1.11e+04*TotalBath - 1.14e+05*Tier1 - 9.57e+04*Tier2 - 7.44e+04*Tier3 - 2.9e+04* Tier4","Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4")
@@ -504,15 +513,18 @@ ComplexMAEs <- c(MAE_Complex,MAE_Complex_log)
 ComplexRSquared <- c(FtestsComplexModel$adj.r.squared,FtestsComplexModel_log$adj.r.squared)
 ComplexFstat <- c(FtestsComplexModel$statistic, FtestsComplexModel_log$statistic)
 ComplexPvalues <- c(FtestsComplexModel$p.value,FtestsComplexModel_log$p.value)
-CompariosnComplex <- data.frame(ComplexModels,ComplexMAEs,ComplexRSquared,ComplexFstat,ComplexPvalues)
-colnames(CompariosnComplex) <- c("Model","MAE","Adj.R^2","F.Stat","P.Value")
+FigRef <- c(12,13)
+CompariosnComplex <- data.frame(ComplexModels,ComplexMAEs,ComplexRSquared,ComplexFstat,ComplexPvalues,FigRef)
+colnames(CompariosnComplex) <- c("Model","MAE","Adj.R^2","F.Stat","P.Value","Fig# reference")
 pander::pandoc.table(CompariosnComplex,caption = "Comparison of MLR models of Sale Price and Log(Sale Price)")
 ```
 The transformation of response variable is useful when there is explicit patterns or non-randomness in the residuals. Transformation reduces hetroscedasticity. Which is evident in the model performance results below. However, we do see outliers in the predictor "Lot Area". It'll be useful to log transform lot area and fit the model again.  
 
+\pagebreak
+
 ### 7.3. Transformation of Lot Area (Predictor)
 
-To address the skewness in Lot Area, the lot area was logarithmically transformed and a multiple linear regression model was fit. Below are the results of the model ***Log(Sale Price) = 4.716e+00 + TotalBsmtSF*1.037e-04 + GrLivArea*1.181e-04 + log(LotArea)*7.309e-02 + TotalBath*2.847e-02 - Tier1*2.180e-01 - Tier2*1.654e-01 - Tier3*9.951e-02 - Tier4*3.200e-02***. It is seen that the partial regression coefficients are stastically significant at 95% significance and so is regression effect with F statistic at 812. The residuals are skewed left, but is fairly normal and they show a funnel shape behavior with Lot area. <br>
+To address the skewness in Lot Area, the lot area was logarithmically transformed and a multiple linear regression model was fit. Below are the results of the model __Log(Sale Price) = 4.716e+00 + TotalBsmtSF(1.037e-04) + GrLivArea(1.181e-04) + log(LotArea)(7.309e-02) + TotalBath(2.847e-02) - Tier1(2.180e-01) - Tier2(1.654e-01) - Tier3(9.951e-02) - Tier4(3.200e-02)__. It is seen that the partial regression coefficients are stastically significant at 95% significance and so is regression effect with F statistic at 812. The residuals are skewed left, but is fairly normal and they show a funnel shape behavior with Lot area. <br>
 
 The model performance is compared with other models from sections 7, 7.1 and 7.2 below.
 
@@ -536,14 +548,18 @@ plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier1, x
 plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier2, xlab = 'Tier 2 Neighborhood', ylab= 'Residuals')
 plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier3, xlab = 'Tier 3 Neighborhood', ylab= 'Residuals')
 plot(y =ComplexModel_log_lot_data$.resid, x = ComplexModel_log_lot_data$Tier4, xlab = 'Tier 4 Neighborhood', ylab= 'Residuals')
+```
+\pagebreak
 
+```{r, echo=F,warning=F,message=F,tidy=T}
 ComplexModels <- c("SalePrice = 7.17e+04 + 5.681e+01*TotalBsmtSF + 6.3e+01*GrLivArea + 8.22e-01*LotArea + 1.11e+04*TotalBath - 1.14e+05*Tier1 - 9.57e+04*Tier2 - 7.44e+04*Tier3 - 2.9e+04* Tier4","Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4",'Log(Sale Price) = 4.716e+00 + TotalBsmtSF*1.037e-04 + GrLivArea*1.181e-04 + log(LotArea)*7.309e-02 + TotalBath*2.847e-02 - Tier1*2.180e-01 - Tier2*1.654e-01 - Tier3*9.951e-02 - Tier4*3.200e-02')
 ComplexMAEs <- c(MAE_Complex,MAE_Complex_log,MAE_Complex_log_lot)
 ComplexRSquared <- c(FtestsComplexModel$adj.r.squared,FtestsComplexModel_log$adj.r.squared,FtestsComplexModel_log_lot$adj.r.squared)
 ComplexFstat <- c(FtestsComplexModel$statistic, FtestsComplexModel_log$statistic,FtestsComplexModel_log_lot$statistic)
 ComplexPvalues <- c(FtestsComplexModel$p.value,FtestsComplexModel_log$p.value,FtestsComplexModel_log_lot$p.value)
-CompariosnComplex <- data.frame(ComplexModels,ComplexMAEs,ComplexRSquared,ComplexFstat,ComplexPvalues)
-colnames(CompariosnComplex) <- c("Model","MAE","Adj.R^2","F.Stat","P.Value")
+ComplexFigRef <- c(12,13,14)
+CompariosnComplex <- data.frame(ComplexModels,ComplexMAEs,ComplexRSquared,ComplexFstat,ComplexPvalues,ComplexFigRef)
+colnames(CompariosnComplex) <- c("Model","MAE","Adj.R^2","F.Stat","P.Value","Fig# Reference")
 pander::pandoc.table(CompariosnComplex,caption = "Comparison of MLR models of Sale Price and Log(Sale Price)")
 ```
 
@@ -553,7 +569,7 @@ It is seen that the transformation of lot area does not provide us with signific
 
 ## 8. Conclusion
 
-Several Multiple linear regression models were fit for predicting sales price of typical homes in Ames Iowa. The models' goodness of fit was evaluated by rigrously checking the assumptions of the model by evaluating the residuals. Transformations of sale price were made to arrive at a better model. Log(Sale Price) = 4.979e+00 + 1e-04*TotalBsmtSF + 1.236e-04*GrLivArea + 1.251e-06*LotArea + 2.809e-02*TotalBath - 2.160e-01*Tier1 - 1.585e-01*Tier2 - 9.391e-02*Tier3 - 2.740e-02*Tier4 was deemed a better model with Mean Absolute Error (MAE) of $21,524. The model has a adjusted R squared value of 82%.
+Several Multiple linear regression models were fit for predicting sales price of typical homes in Ames Iowa. The models' goodness of fit was evaluated by rigrously checking the assumptions of the model by evaluating the residuals. Transformations of sale price were made to arrive at a better model. Log(Sale Price) = 4.979e+00 + 1e-04(TotalBsmtSF) + 1.236e-04(GrLivArea) + 1.251e-06(LotArea) + 2.809e-02(TotalBath) - 2.160e-01(Tier1) - 1.585e-01(Tier2) - 9.391e-02(Tier3) - 2.740e-02(Tier4) was deemed a better model with Mean Absolute Error (MAE) of $21,524. The model has a adjusted R squared value of 82%.
 
 
 
