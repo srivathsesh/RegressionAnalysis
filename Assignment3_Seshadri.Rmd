@@ -5,6 +5,9 @@ date: "7/8/2017"
 output: 
   pdf_document: 
     fig_caption: yes
+    pandoc_args: [
+      "-V", "classoption=twocolumn"
+    ]
 ---
 
 ```{r setup, include=FALSE}
@@ -81,9 +84,9 @@ colsofinterest <- c('SID'
 , 'MoSold'
 , 'YrSold'
 , 'SaleCondition'
-, 'SalePrice'
 , 'FirstFlrSF'
-, 'SecondFlrSF')
+, 'SecondFlrSF'
+, 'SalePrice')
 
 ```
 
@@ -96,7 +99,9 @@ The following variables in the data were deemed to be of interest for model buil
 
 ```{r SampleFrame, echo = F, warning = F, message=F, tidy=T}
 # Cleanly show the columns of interest in pdf. Making the colsofinterest as matrix for easy printing.
-colsmatrix <- matrix(colsofinterest[2:length(colsofinterest)],ncol = 3)
+test <- colsofinterest[2:length(colsofinterest)]
+length(colsofinterest)
+colsmatrix <- matrix(test,ncol = 3)
 # printing on pdf
 knitr::kable(colsmatrix, caption = "Variables of interest")
 ```
@@ -253,7 +258,9 @@ hist(ResdfNI$.resid, main = "Histogram of residuals", xlab = "Residuals")
 qqnorm(ResdfNI$.resid,title = "Normal Q-Q plot of residuals (Sale Price)")
 qqline(ResdfNI$.resid)
 plot(ResdfNI$GrLivArea,ResdfNI$.resid,main = "Residuals vs Living Area", xlab = "Above grade living area", ylab = "Residuals")
-
+x <- as.numeric(ResdfNI$.fitted^2)
+y <-as.numeric(ResdfNI$SalePrice^2)
+sum(x)/sum(y)
 ```
 
 

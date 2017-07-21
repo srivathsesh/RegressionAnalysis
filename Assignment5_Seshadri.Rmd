@@ -1,0 +1,200 @@
+---
+title: 'Assignment 5: Automated Variable selection, multicollinearity and predictive
+  modeling.'
+author: "Sri Seshadri"
+date: "7/19/2017"
+output: 
+  pdf_document: 
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+## 1. Introduction
+<span> <style color = 'red'> NEEDS TO BE COMPLETED </style> </span>
+
+```{r Read data, echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
+ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
+# chamge from scientic notations, to restore to default options(scipen = 0)
+options(scipen = 999)
+library(magrittr)
+```
+
+```{r Sample Frame, echo = FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
+LivingAreaCutoff <- 800
+# Adding drop conditions varaible
+# insert dummy variable to code SaleCondition being either equal to 'Normal' or 'Partial'
+ames$Sale_NrmPar <- ifelse(ames$SaleCondition == 'Normal' | ames$SaleCondition == 'Partial', 1,0)
+ames$DropCondition <- ifelse(ames$Zoning!='RL','01: Not LowDensityZone',
+	ifelse(ames$Sale_NrmPar == 0,'02: Not Normal/Partial Sale',
+	ifelse(ames$Street!='Pave','03: Street Not Paved',
+	ifelse(ames$GrLivArea <LivingAreaCutoff,'04: Less than 800 SqFt',
+	 ifelse(ames$TotalBsmtSF <1,'05: No Basement', 
+	 ifelse(ames$GrLivArea > 4000, '06: Greater 4000 sqft living Area - Influence Points',
+ifelse(ames$GarageArea > 1000, '07:Garage area greater than 1000 sqft - Influence points',
+	'99: Eligible Sample')
+	))))))
+
+# Waterfall
+waterfall <- ames %>% 
+  dplyr::group_by(DropCondition) %>% 
+  dplyr::summarise(counts=n())
+
+```
+
+## 2. Sample definition
+
+It is assumed that typical home buyers are those that move from apartments to single family or town homes. Also apartments are less likely to be sold to individuals as they remain holdings of owners for rental income. Single family and town homes belong to "Residential Low density" (RL) zoning classification in the city of Ames. Data belonging to only to the RL zone is considered for analysis and model development. Also, it is assumed that typical homes have paved streets for access and above grade living area greater than `r LivingAreaCutoff` square feet. Sales data belonging to homes that were sold in abnormal conditions such as trade in, foreclosure or short sale are not included in the analysis. Also, sales between family members, sale of adjoining lot, linked properties are omitted from the data. Homes with no basements are excluded from the analysis at this time. Homes with living area greater than 4000 square feet and garage area greater than 1000 square feet were identified as outliers and are therefore removed from the analysis. Table 1 shows the waterfall of the data not included in the data and the eligible samples.
+
+```{r Waterfall, echo=FALSE, warning = F, message=F, tidy=T}
+# Print waterfall table
+knitr::kable(waterfall, align = c("l", "r"),caption = "Drop waterfall")
+# Define training portion of the data
+trainPercent <- round(0.7,1)
+# Columns of interest
+colsofinterest <- c('SID'
+  ,'LotArea'
+, 'LotConfig'
+, 'Neighborhood'
+, 'BldgType'
+, 'OverallCond'
+, 'YearRemodel'
+, 'TotalBsmtSF'
+, 'GrLivArea'
+, 'BsmtFullBath'
+, 'BsmtHalfBath'
+, 'FullBath'
+, 'HalfBath'
+, 'BedroomAbvGr'
+, 'KitchenQual'
+, 'TotRmsAbvGrd'
+, 'GarageArea'
+, 'MoSold'
+, 'YrSold'
+, 'SaleCondition'
+, 'FirstFlrSF'
+, 'SecondFlrSF'
+, 'OverallQual'
+, 'SalePrice')
+
+```  
+
+### 2.1 Predictor variables of interest for modelling
+
+The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. Some variables may be combined into one variable for model building purposes. For example, the number of baths may be sumed into one variable or the above grade living area and the basement area may be sumed into one variable yielding total square feet. The categorical variables are coded into indicator variables. The following table
+
+```{r SampleFrame, echo = F, warning = F, message=F, tidy=T}
+# Cleanly show the columns of interest in pdf. Making the colsofinterest as matrix for easy printing
+# printing on pdf
+knitr::kable(matrix(c(colsofinterest[2:23],"",""),ncol = 3,byrow = F), caption = "Predictors of interest")
+tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90", " > 90"))
+Lotconfigdf <- data.frame(Indicator = c("CornerLot", "CulDSac", "Frontal2", "Frontal3"), Description = c("Corner lot", "CulDSac Lot", "2 frontal lot", "3 frontal lot") )
+Bldgtypedf <- data.frame(Indicator = c("TwnhsE","Twnhs","Duplex","fam2"),Decription = c("Townhouse", "Twin house", "Duplex", "2 family conversion"))
+KitchenQualdf <- data.frame(Indicator = c("KTA", "KGD", "KEx", "KFa"),Decription = c("Typical/Average", "Good", "Excellent", "Fair"))
+```  
+
+
+### 2.2 Training and validation samples.
+
+From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly sampled to be used as the dataset for model development. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 3 shows the split of the total eligible samples.  
+
+
+```{r TrainingSet, echo=F, warning=F, message=F, tidy=T}
+# Get sample frame.
+SampleFrame <- ames %>% 
+  dplyr::filter(DropCondition == '99: Eligible Sample') %>% 
+  dplyr::select_(.dots = colsofinterest)
+SampleFrame <- SampleFrame %>% 
+  dplyr::mutate(TotalBath = BsmtFullBath + BsmtHalfBath + FullBath + HalfBath) %>% 
+  dplyr::mutate(TotalSQFT = TotalBsmtSF + FirstFlrSF + SecondFlrSF) %>% 
+  dplyr::mutate(SQFTNoBsmt = FirstFlrSF + SecondFlrSF) %>% 
+  dplyr::mutate(QualityIndex = OverallQual*OverallCond) %>% 
+  dplyr::mutate(YearMonthSold = YrSold + MoSold/100) %>% 
+  dplyr::mutate(u = runif(nrow(SampleFrame)))
+# -----------------------------Grouping Neighborhoods-----------------------------------------------
+NeighborhoodGrps <- SampleFrame %>%
+              dplyr:: select(Neighborhood,SalePrice,TotalSQFT) %>% 
+               dplyr::group_by(Neighborhood) %>% 
+              dplyr::summarise(TotalSalePrice = sum(SalePrice), Total.SQFT = sum(TotalSQFT),PricePerSqFt = TotalSalePrice/Total.SQFT)
+
+Less60Neigh <- NeighborhoodGrps$Neighborhood[which(NeighborhoodGrps$PricePerSqFt <= 60)]
+Bet60_70 <-  NeighborhoodGrps$Neighborhood[which(NeighborhoodGrps$PricePerSqFt <= 70 & NeighborhoodGrps$PricePerSqFt > 60 )]
+Bet70_80 <-  NeighborhoodGrps$Neighborhood[which(NeighborhoodGrps$PricePerSqFt <= 80 & NeighborhoodGrps$PricePerSqFt > 70 )]
+Bet80_90 <-   NeighborhoodGrps$Neighborhood[which(NeighborhoodGrps$PricePerSqFt <= 90 & NeighborhoodGrps$PricePerSqFt > 80)]
+Greater_90 <-   NeighborhoodGrps$Neighborhood[which(NeighborhoodGrps$PricePerSqFt > 90)]
+
+SampleFrame$Tier1 <- ifelse(SampleFrame$Neighborhood %in% Less60Neigh,1,0)
+SampleFrame$Tier2 <- ifelse(SampleFrame$Neighborhood %in% Bet60_70,1,0)
+SampleFrame$Tier3 <- ifelse(SampleFrame$Neighborhood %in% Bet70_80, 1,0)
+SampleFrame$Tier4 <- ifelse(SampleFrame$Neighborhood %in% Bet80_90, 1,0)
+SampleFrame$Tier5 <- ifelse(SampleFrame$Neighborhood %in% Greater_90, 1,0)
+
+tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90", " > 90"))
+#-------------------------------------------------------------------------------------------------------
+
+#------------------------------Creating indicator variables --------------------------------------------
+# IV for LotConfig, base Inside lot
+SampleFrame$CornerLot <- ifelse(SampleFrame$LotConfig == "Corner",1,0)
+SampleFrame$CulDSac <- ifelse(SampleFrame$LotConfig == "CulDSac",1,0)
+SampleFrame$Frontal2 <- ifelse(SampleFrame$LotConfig == "FR2",1,0)
+SampleFrame$Frontal3 <- ifelse(SampleFrame$LotConfig == "F3",1,0)
+Lotconfigdf <- data.frame(Indicator = c("CornerLot", "CulDSac", "Frontal2", "Frontal3"), Description = c("Corner lot", "CulDSac Lot", "2 frontal lot", "3 frontal lot") )
+# IV for BlgType, base "1Fam"
+SampleFrame$TwnhsE <- ifelse(SampleFrame$BldgType == "TwnhsE",1,0)
+SampleFrame$Twnhs <- ifelse(SampleFrame$BldgType == "Twnhs", 1,0)
+SampleFrame$Duplex <- ifelse(SampleFrame$BldgType == "Duplex", 1,0)
+SampleFrame$fam2 <- ifelse(SampleFrame$BldgType == "2famCon",1,0)
+Bldgtypedf <- data.frame(Indicator = c("TwnhsE","Twnhs","Duplex","fam2"),Decription = c("Townhouse", "Twin house", "Duplex", "2 family conversion"))
+# IV for SaleCondition, bae "Normal"
+SampleFrame$PartialSaleCond <- ifelse(SampleFrame$SaleCondition == "Partial",1,0)
+# IV for KitchenQual
+SampleFrame$KTA <- ifelse(SampleFrame$KitchenQual == "TA", 1,0)
+SampleFrame$KGD <- ifelse(SampleFrame$KitchenQual == "Gd", 1,0)
+SampleFrame$KEx <- ifelse(SampleFrame$KitchenQual == "Ex", 1,0)
+SampleFrame$KFa <- ifelse(SampleFrame$KitchenQual == "Fa", 1,0)
+KitchenQualdf <- data.frame(Indicator = c("KTA", "KGD", "KEx", "KFa"),Decription = c("Typical/Average", "Good", "Excellent", "Fair"))
+# --------------------------------------------------------------------------------------------------------------
+# training set
+#train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
+train <- subset(SampleFrame , u < 0.7)
+train <- train %>% dplyr::arrange(SID)
+# Validation set
+#Validation <- dplyr::sample_n(SampleFrame,size = (1-trainPercent)*nrow(SampleFrame), replace = F, set.seed(2000))
+Validation <- subset(SampleFrame, u > 0.7)
+Validation <- Validation %>% dplyr::arrange(SID)
+# Check row counts
+df <- cbind(Data = c("Training set", "Validation set","Total"), Samples = c(nrow(train),nrow(Validation),nrow(train) + nrow(Validation)))
+knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling")
+Predictors <- c('LotArea'
+                ,'YearRemodel'
+                , 'TotalBsmtST'
+                , 'GrLivArea'
+                , 'TotalBath'
+                , 'TotalSQFT'
+                , 'QualityIndex'
+                , 'TotRmsAbvGrd'
+                , 'GarageArea'
+                , 'YearMonthSold'
+                , 'Tier1'
+                , 'Tier2'
+                , 'Tier3'
+                , 'Tier4'
+                , 'Tier5'
+                , 'PartialSaleCond'
+                , 'CornerLot'
+                , 'CulDSac'
+                , 'Frontal2'
+                , 'Frontal3'
+                , 'TwnhsE'
+                , 'Twnhs'
+                , 'Duplex'
+                , 'fam2'
+                , 'KTA'
+                , 'KGD'
+                , 'KEx'
+                , 'KFa'
+)
+```
+
