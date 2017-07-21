@@ -83,22 +83,66 @@ colsofinterest <- c('SID'
 
 ### 2.1 Predictor variables of interest for modelling
 
-The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. Some variables may be combined into one variable for model building purposes. For example, the number of baths may be sumed into one variable or the above grade living area and the basement area may be sumed into one variable yielding total square feet. The categorical variables are coded into indicator variables. The following table
+The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. Some variables may be combined into one variable for model building purposes. For example, the number of baths may be sumed into one variable or the above grade living area and the basement area may be sumed into one variable yielding total square feet. The categorical variables are coded into indicator variables.
 
 ```{r SampleFrame, echo = F, warning = F, message=F, tidy=T}
 # Cleanly show the columns of interest in pdf. Making the colsofinterest as matrix for easy printing
 # printing on pdf
 knitr::kable(matrix(c(colsofinterest[2:23],"",""),ncol = 3,byrow = F), caption = "Predictors of interest")
-tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90", " > 90"))
+tierdf <- data.frame(Tier = c(1,2,3,4), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90"))
 Lotconfigdf <- data.frame(Indicator = c("CornerLot", "CulDSac", "Frontal2", "Frontal3"), Description = c("Corner lot", "CulDSac Lot", "2 frontal lot", "3 frontal lot") )
 Bldgtypedf <- data.frame(Indicator = c("TwnhsE","Twnhs","Duplex","fam2"),Decription = c("Townhouse", "Twin house", "Duplex", "2 family conversion"))
 KitchenQualdf <- data.frame(Indicator = c("KTA", "KGD", "KEx", "KFa"),Decription = c("Typical/Average", "Good", "Excellent", "Fair"))
+Predictors <- c('LotArea'
+                ,'YearRemodel'
+                , 'TotalBsmtST'
+                , 'GrLivArea'
+                , 'TotalBath'
+                , 'TotalSQFT'
+                , 'QualityIndex'
+                , 'TotRmsAbvGrd'
+                , 'GarageArea'
+                , 'YearMonthSold'
+                , 'Tier1'
+                , 'Tier2'
+                , 'Tier3'
+                , 'Tier4'
+                , 'Tier5'
+                , 'PartialSaleCond'
+                , 'CornerLot'
+                , 'CulDSac'
+                , 'Frontal2'
+                , 'Frontal3'
+                , 'TwnhsE'
+                , 'Twnhs'
+                , 'Duplex'
+                , 'fam2'
+                , 'KTA'
+                , 'KGD'
+                , 'KEx'
+                , 'KFa'
+)
 ```  
+
+The following tables describe the indicator variables:
+
+```{r IV, echo=F,warning=F,message=F,tidy=T}
+knitr::kable(tierdf, caption = "Neighborhood tiers,base category > 90")
+knitr::kable(Lotconfigdf, caption = "Lot configuration indicator variables; base category: Inside Lot")
+knitr::kable(Bldgtypedf, caption = "Building type indicator variables; base category: single family")
+knitr::kable(KitchenQualdf, caption = "Kitchen Quality indicator variables; base category: poor")
+```
+
+Therefore the predictors that are to be used in the models are as below.
+
+```{r Predictors, echo=F, warning=F,message=F,tidy=T}
+knitr::kable(matrix(Predictors,ncol = 4), caption = "Predictors for linear regression models")
+```
 
 
 ### 2.2 Training and validation samples.
 
-From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly sampled to be used as the dataset for model development. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 3 shows the split of the total eligible samples.  
+From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly sampled to be used as the dataset for model development. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 8 shows the split of the total eligible samples.  
 
 
 ```{r TrainingSet, echo=F, warning=F, message=F, tidy=T}
@@ -129,7 +173,7 @@ SampleFrame$Tier1 <- ifelse(SampleFrame$Neighborhood %in% Less60Neigh,1,0)
 SampleFrame$Tier2 <- ifelse(SampleFrame$Neighborhood %in% Bet60_70,1,0)
 SampleFrame$Tier3 <- ifelse(SampleFrame$Neighborhood %in% Bet70_80, 1,0)
 SampleFrame$Tier4 <- ifelse(SampleFrame$Neighborhood %in% Bet80_90, 1,0)
-SampleFrame$Tier5 <- ifelse(SampleFrame$Neighborhood %in% Greater_90, 1,0)
+#SampleFrame$Tier5 <- ifelse(SampleFrame$Neighborhood %in% Greater_90, 1,0)
 
 tierdf <- data.frame(Tier = c(1,2,3,4,5), `Price per sq.ft` = c("<= 60", "> 60 and <= 70", "> 70 and <= 80", "> 80 and <= 90", " > 90"))
 #-------------------------------------------------------------------------------------------------------
@@ -156,20 +200,9 @@ SampleFrame$KEx <- ifelse(SampleFrame$KitchenQual == "Ex", 1,0)
 SampleFrame$KFa <- ifelse(SampleFrame$KitchenQual == "Fa", 1,0)
 KitchenQualdf <- data.frame(Indicator = c("KTA", "KGD", "KEx", "KFa"),Decription = c("Typical/Average", "Good", "Excellent", "Fair"))
 # --------------------------------------------------------------------------------------------------------------
-# training set
-#train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
-train <- subset(SampleFrame , u < 0.7)
-train <- train %>% dplyr::arrange(SID)
-# Validation set
-#Validation <- dplyr::sample_n(SampleFrame,size = (1-trainPercent)*nrow(SampleFrame), replace = F, set.seed(2000))
-Validation <- subset(SampleFrame, u > 0.7)
-Validation <- Validation %>% dplyr::arrange(SID)
-# Check row counts
-df <- cbind(Data = c("Training set", "Validation set","Total"), Samples = c(nrow(train),nrow(Validation),nrow(train) + nrow(Validation)))
-knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling")
 Predictors <- c('LotArea'
                 ,'YearRemodel'
-                , 'TotalBsmtST'
+                , 'TotalBsmtSF'
                 , 'GrLivArea'
                 , 'TotalBath'
                 , 'TotalSQFT'
@@ -181,7 +214,6 @@ Predictors <- c('LotArea'
                 , 'Tier2'
                 , 'Tier3'
                 , 'Tier4'
-                , 'Tier5'
                 , 'PartialSaleCond'
                 , 'CornerLot'
                 , 'CulDSac'
@@ -196,5 +228,61 @@ Predictors <- c('LotArea'
                 , 'KEx'
                 , 'KFa'
 )
+# training set
+#train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
+train <- subset(SampleFrame , u < 0.7)
+train <- train %>% dplyr::arrange(SID)
+train.Clean <- train %>% dplyr::select(c(Predictors,'SalePrice'))
+# Validation set
+#Validation <- dplyr::sample_n(SampleFrame,size = (1-trainPercent)*nrow(SampleFrame), replace = F, set.seed(2000))
+Validation <- subset(SampleFrame, u > 0.7)
+Validation <- Validation %>% dplyr::arrange(SID) 
+# Check row counts
+df <- cbind(Data = c("Training set", "Validation set","Total"), Samples = c(nrow(train),nrow(Validation),nrow(train) + nrow(Validation)))
+knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling")
+
+```
+
+## 3. Model identification by Automated Variable Selection
+
+```{r ModelSelection, echo=F,message=F,warning=F,tidy=T}
+# upper model as full model
+upper.lm <- lm(data = train.Clean,SalePrice ~ .)
+summary(upper.lm)
+
+# lower model as the intercept model
+lower.lm <- lm(data = train.Clean, SalePrice ~ 1)
+summary(lower.lm)
+
+# model to initate a stepwise regression
+sqft.lm <- lm(data = train.Clean, SalePrice ~ TotalSQFT)
+summary(sqft.lm)
+
+# forward selection
+forward.lm <- MASS::stepAIC(object = lower.lm,scope = list(upper = formula(upper.lm), lower = ~1), direction = "forward")
+summary.lm(forward.lm)
+# Backward selection
+backward.lm <- MASS::stepAIC(object = upper.lm, direction = "backward")
+summary.lm(backward.lm)
+# stepwise 
+stepwise.lm <- MASS::stepAIC(object = sqft.lm,scope = list(upper = formula(upper.lm), lower = ~1),direction = "both")
+summary(stepwise.lm)
+
+#junkmodel
+
+junk.lm <- lm(SalePrice ~ OverallQual + OverallCond + QualityIndex + GrLivArea + TotalSQFT, data = train)
+summary(junk.lm)
+
+# VIF
+sort(vif(junk.lm),decreasing = T)
+sort(vif(forward.lm),decreasing = T)
+sort(vif(backward.lm),decreasing = T)
+sort(vif(stepwise.lm),decreasing = T)
+
+forward.test <- predict(object = stepwise.lm, newdata = Validation)
+test <- cbind(Validation$SalePrice, forward.test)
+test <- test %>% dplyr::mutate(error = Validation.SalePrice - forward.test)
+
+
 ```
 
