@@ -226,6 +226,7 @@ Predictors <- c('LotArea'
 )
 # training set
 #train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
+set.seed(200)
 train <- subset(SampleFrame , u < 0.7)
 train <- train %>% dplyr::arrange(SID)
 train.Clean <- train %>% dplyr::select(c(Predictors,'SalePrice'))
@@ -381,19 +382,80 @@ The attempt here is to verify the intuition of how correlated predictor variable
 summary(junk.lm)
 
 ```
+### 3.7.1 Variance Inflation Factors (VIF) 
+
+Having known that the predictors in the junk model are correlated, it would be interesting to compare correlation amongst predictors in the models from automated variable selection methods against that of the junk model. Table 9 shows the top 5 highest VIFs by models. 
+
+It is not surprising that the highest VIFs are from the junk model. However we see neighborhood Tiers 2 and 3 have high VIF ( > 10). This is not surprising either as they are indicator(dummy) variables. The indicator variables are correlated amongst themselves and can be modelled as linear combinations of each other. Thereby yielding a high coefficient of determintion when indicator variables are regressed by other predictors, causing an inflated VIF. 
 
 ```{r VIFs, echo=F,warning=F,message=F,tidy=T}
 # VIF
 
-sort(car::vif(junk.lm),decreasing = T)
-sort(car::vif(forward.lm),decreasing = T)
-sort(car::vif(backward.lm),decreasing = T)
-sort(car::vif(stepwise.lm),decreasing = T)
+JunkVIF <- as.data.frame(sort(car::vif(junk.lm),decreasing = T))
+JunkVIF$Model <- "Junk"
+JunkVIF$Predictors <- row.names(JunkVIF)
+colnames(JunkVIF) <- c("VIF","Model", "Predictors")
 
+forwardVIF <- as.data.frame(sort(car::vif(forward.lm),decreasing = T))
+forwardVIF$Model <- "Forward Selection"
+forwardVIF$Predictors <- row.names(forwardVIF)
+colnames(forwardVIF) <- c("VIF","Model", "Predictors")
+backwardVIF <- as.data.frame(sort(car::vif(backward.lm),decreasing = T))
+backwardVIF$Model <- "Backward Elimination"
+backwardVIF$Predictors <- row.names(backwardVIF)
+colnames(backwardVIF) <- c("VIF","Model", "Predictors")
+stepwiseVIF <- as.data.frame(sort(car::vif(stepwise.lm),decreasing = T))
+stepwiseVIF$Model <- "Stepwise"
+stepwiseVIF$Predictors <- row.names(stepwiseVIF)
+colnames(stepwiseVIF) <- c("VIF","Model", "Predictors")
+VIF <- rbind(JunkVIF,forwardVIF,backwardVIF,stepwiseVIF,row.names = F)
+VIF <- VIF[,c("Model","Predictors", "VIF")]
+VIF$VIF <- round(VIF$VIF,2)
+
+VIFReport <- VIF[1:nrow(VIF)-1,] %>% dplyr::group_by(Model) %>% 
+  dplyr::top_n(n =5,wt = VIF)
+#colnames(VIF) <- c("Predictor","VIF", "Model")
+knitr::kable(VIFReport,"latex",caption = "VIF - Top 5 my model") %>% 
+  kableExtra::kable_styling(latex_options = "striped") %>% 
+  kableExtra::collapse_rows(columns = 1)
+
+```
+
+## 4. Model Comparison
+```{r ModelComparison, echo=F,warning=F,message=F,tidy=T}
+junkmetrics <- broom::glance(junk.lm)
+junkmodel <- broom::augment(junk.lm)
+junkmetrics$MAE <- mean(abs(junkmodel$.resid))
+junkmetrics$MSE <- mean(junkmodel$.resid ^2)
+
+forwardmetrics <- broom::glance(forward.lm)
+forwardmodel <- broom::augment(forward.lm)
+forwardmetrics$MAE <- mean(abs(forwardmodel$.resid))
+forwardmetrics$MSE <- mean(forwardmodel$.resid ^2)
+
+backwardmetrics <- broom::glance(backward.lm)
+backwardmodel <- broom::augment(backward.lm)
+backwardmetrics$MAE <- mean(abs(backwardmodel$.resid))
+backwardmetrics$MSE <- mean(backwardmodel$.resid ^2)
+
+stepwisemetrics <- broom::glance(stepwise.lm)
+stepwisemodel <- broom::augment(stepwise.lm)
+stepwisemetrics$MAE <- mean(abs(stepwisemodel$.resid))
+stepwisemetrics$MSE <- mean(stepwisemodel$.resid ^2)
+
+comparison <- rbind(junkmetrics,forwardmetrics,backwardmetrics,stepwisemetrics)
+comparison$model <- c("Junk", "Forward Selection", "Backward Elimination", "Stepwise")
+comparison <- comparison %>% 
+  dplyr::select(model,adj.r.squared,AIC,BIC,MSE, MAE)
+
+knitr::kable(comparison,caption = "Model comparison")
+```
+
+```{r PredictiveAccuracy, echo=F,warning=F,message=F}
 forward.test <- predict(object = stepwise.lm, newdata = Validation)
 test <- data.frame(Validation$SalePrice, forward.test)
 test <- test %>% dplyr::mutate(error = Validation.SalePrice - forward.test)
 
-
 ```
+
 

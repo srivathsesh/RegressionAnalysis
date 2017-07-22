@@ -281,9 +281,9 @@ Hash: 9c51936d8dd00b2f1d4fe9d10499694c
 
 Package: kableExtra
 Source: CRAN
-Version: 0.2.1
-Hash: 703e33a2960b1809e9c3be02956208b0
-Requires: knitr, magrittr, rmarkdown, rvest, stringr, xml2
+Version: 0.3.0
+Hash: 651c55385ddc37d14ec3106448e0eb3f
+Requires: knitr, magrittr, readr, rmarkdown, rvest, stringr, xml2
 
 Package: knitr
 Source: CRAN
