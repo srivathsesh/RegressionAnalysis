@@ -83,7 +83,7 @@ colsofinterest <- c('SID'
 
 ### 2.1 Predictor variables of interest for modelling
 
-The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. Some variables may be combined into one variable for model building purposes. For example, the number of baths may be sumed into one variable or the above grade living area and the basement area may be sumed into one variable yielding total square feet. The categorical variables are coded into indicator variables.
+The following variables in the data were deemed to be of interest for model building. The choice of parameters was based upon intial Exploratory Data Analysis (EDA) and subject matter expertise. The categorical variables are coded into indicator variables for model building purposes, the tables 3, 4, 5 and 6 show the description of the indicator variables.
 
 ```{r SampleFrame, echo = F, warning = F, message=F, tidy=T}
 # Cleanly show the columns of interest in pdf. Making the colsofinterest as matrix for easy printing
@@ -133,16 +133,12 @@ knitr::kable(Bldgtypedf, caption = "Building type indicator variables; base cate
 knitr::kable(KitchenQualdf, caption = "Kitchen Quality indicator variables; base category: poor")
 ```
 
-Therefore the predictors that are to be used in the models are as below.
 
-```{r Predictors, echo=F, warning=F,message=F,tidy=T}
-knitr::kable(matrix(Predictors,ncol = 4), caption = "Predictors for linear regression models")
-```
 
 
 ### 2.2 Training and validation samples.
 
-From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly sampled to be used as the dataset for model development. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 8 shows the split of the total eligible samples.  
+From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is randomly sampled to be used as the dataset for model development. This dataset would be refered to as training dataset. The remaining `r paste0((1-trainPercent)*100,"%")` is used as the validation set to evaluate the model performance of predicting sale price on data that is outside the training set. Table 7 shows the split of the total eligible samples.  
 
 
 ```{r TrainingSet, echo=F, warning=F, message=F, tidy=T}
@@ -218,15 +214,15 @@ Predictors <- c('LotArea'
                 , 'CornerLot'
                 , 'CulDSac'
                 , 'Frontal2'
-                , 'Frontal3'
+                # , 'Frontal3'
                 , 'TwnhsE'
                 , 'Twnhs'
                 , 'Duplex'
-                , 'fam2'
+            #,'fam2'
                 , 'KTA'
                 , 'KGD'
                 , 'KEx'
-                , 'KFa'
+                # , 'KFa'
 )
 # training set
 #train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
@@ -245,42 +241,144 @@ knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling")
 
 ## 3. Model identification by Automated Variable Selection
 
-```{r ModelSelection, echo=F,message=F,warning=F,tidy=T}
+Attribute variables such as "TotalSQFT"; sum of basement square feet and above grade living area and "QualityIndex"; product of overall quality and overall condition has been created for use as predictor variables in model building. With the attribute variables and the indicator variables created, below is a list of predictor variables that will be used for automated variable selection and modelling.
+
+```{r Predictors, echo=F, warning=F,message=F,tidy=T}
+knitr::kable(matrix(Predictors,ncol = 4), caption = "Predictors for linear regression models")
+```
+
+### 3.1. Full model
+
+```{r FullModel, echo=F,message=F,warning=F,tidy=T}
 # upper model as full model
 upper.lm <- lm(data = train.Clean,SalePrice ~ .)
-summary(upper.lm)
+coefs <- round(coefficients(upper.lm),2)
+signs <- ifelse(sign(coefs)==1,"+", "-")
+Betas <- paste(abs(coefs[2:length(coefs)]),"*",Predictors)
+uppereqn <- paste("SalePrice = ",paste(coefs[1],paste(paste(signs[2:24], Betas),collapse = " ")))
 
+```
+
+A full model with all the predictors used is fit as an exhaustive search. This will be used as an upper boundry for automated variable selection processes; forward selection and as a starting condition in the backward selection process. The full model and its fit is shown below:    
+
+__`r uppereqn`__  
+
+```{r PrintFull_NoInterceptModel, echo=F,warning=F,tidy=T}
+options(scipen = 0)
+summary(upper.lm)
 # lower model as the intercept model
 lower.lm <- lm(data = train.Clean, SalePrice ~ 1)
-summary(lower.lm)
+```
 
+### 3.2. Intercept only model as start for forward variable selection
+
+An intercept only model is used as a lower boundary (no predictors used) condition for forward selection.  
+
+
+\begin {center}
+`r paste("Sale Price = ", round(coef(lower.lm),2))`
+\end {center}  
+
+  
+  
+```{r InterceptModel, echo=F,message=F,warning=F,tidy=T}
+# print summary for InterceptModel
+summary(lower.lm)
 # model to initate a stepwise regression
 sqft.lm <- lm(data = train.Clean, SalePrice ~ TotalSQFT)
-summary(sqft.lm)
+coef_IM <- round(coef(sqft.lm),2)
+signs_IM <- ifelse(sign(coef_IM)==1,"+","-")
+Betas_IM <- paste(abs(coef_IM[2:length(coef_IM)]),"*","TotalSQFT")
+lowereqn <- paste("SalePrice = ",paste(coef_IM[1],paste(paste(signs_IM[2:2], Betas_IM),collapse = " ")))
+```
+\pagebreak
 
+
+### 3.3. Simple linear regression as starting condition for stepwise variable selection
+
+A simple linear regression model with total square feet as predictor is used as a starting point for stepwise variable selection.Below is the model and fit:  
+
+
+\begin {center}
+*`r lowereqn`*
+\end {center}
+
+
+```{r step, echo=F,message=F,warning=F,tidy=T}
+ summary(sqft.lm)
 # forward selection
-forward.lm <- MASS::stepAIC(object = lower.lm,scope = list(upper = formula(upper.lm), lower = ~1), direction = "forward")
+forward.lm <- MASS::stepAIC(object = lower.lm,scope = list(upper = formula(upper.lm), lower = ~1), direction = "forward",trace = F)
+coef_Fwd <- round(coef(forward.lm),2)
+signs_Fwd <- ifelse(sign(coef_Fwd)==1,"+","-")
+formula_Fwd <- as.character(formula(forward.lm))[3]
+predictors_Fwd <- unlist(strsplit(formula_Fwd, split = "+",fixed = T))
+Betas_Fwd <- paste(abs(coef_Fwd[2:length(coef_Fwd)]),"*",predictors_Fwd)
+fwdeqn <- paste("SalePrice = ",paste(coef_Fwd[1],paste(paste(signs_Fwd[2:length(signs_Fwd)], Betas_Fwd),collapse = " ")))
+```  
+
+## 3.4. Forward variable selection.
+
+A forward selection method is used for selecting variables for linear regression fit. The following model was fit by the automated forward selection by AIC.
+
+ __`r fwdeqn`__
+```{r Forward,echo=F,message=F,warning=F,tidy=T}
+options(scipen = 0)
 summary.lm(forward.lm)
 # Backward selection
-backward.lm <- MASS::stepAIC(object = upper.lm, direction = "backward")
+backward.lm <- MASS::stepAIC(object = upper.lm, direction = "backward",trace = F)
+coef_Bwd <- round(coef(backward.lm),2)
+signs_Bwd <- ifelse(sign(coef_Bwd)==1,"+","-")
+formula_Bwd <- as.character(formula(backward.lm))[3]
+predictors_Bwd <- unlist(strsplit(formula_Bwd, split = "+",fixed = T))
+Betas_Bwd <- paste(abs(coef_Bwd[2:length(coef_Bwd)]),"*",predictors_Bwd)
+Bwdeqn <- paste("SalePrice = ",paste(coef_Bwd[1],paste(paste(signs_Bwd[2:length(signs_Bwd)], Betas_Bwd),collapse = " ")))
+```
+
+## 3.5 Backward elimination selection.
+
+The following model is a result of a backward elimination selection, with full model as its starting model.
+
+ __`r Bwdeqn`__
+ 
+ 
+```{r Backward, echo=F,message=F,warning=F,tidy=T}
 summary.lm(backward.lm)
 # stepwise 
-stepwise.lm <- MASS::stepAIC(object = sqft.lm,scope = list(upper = formula(upper.lm), lower = ~1),direction = "both")
-summary(stepwise.lm)
+stepwise.lm <- MASS::stepAIC(object = sqft.lm,scope = list(upper = formula(upper.lm), lower = ~1),direction = "both", trace = F)
+coef_Stp <- round(coef(stepwise.lm),2)
+signs_Stp <- ifelse(sign(coef_Stp)==1,"+","-")
+formula_Stp <- as.character(formula(stepwise.lm))[3]
+predictors_Stp <- unlist(strsplit(formula_Stp, split = "+",fixed = T))
+Betas_Stp <- paste(abs(coef_Stp[2:length(coef_Stp)]),"*",predictors_Stp)
+Stpeqn <- paste("SalePrice = ",paste(coef_Stp[1],paste(paste(signs_Stp[2:length(signs_Stp)], Betas_Stp),collapse = " ")))
+```
 
+## 3.6. Stepwise regression method.
+
+The following model is a result of stepwise variable selection with full model and simple linear regression model with Total square feet as a predictor as boundary conditions. 
+
+ __`r Stpeqn`__
+ 
+```{r Stepwise, echo=F,message=F,warning=F,tidy=T}
+
+summary(stepwise.lm)
+```
+
+```{r junkModel, echo=F,message=F,warning=F,tidy=T}
 #junkmodel
 
 junk.lm <- lm(SalePrice ~ OverallQual + OverallCond + QualityIndex + GrLivArea + TotalSQFT, data = train)
-summary(junk.lm)
+# summary(junk.lm)
 
 # VIF
-sort(vif(junk.lm),decreasing = T)
-sort(vif(forward.lm),decreasing = T)
-sort(vif(backward.lm),decreasing = T)
-sort(vif(stepwise.lm),decreasing = T)
+
+# sort(car::vif(junk.lm),decreasing = T)
+# sort(car::vif(forward.lm),decreasing = T)
+# sort(car::vif(backward.lm),decreasing = T)
+# sort(car::vif(stepwise.lm),decreasing = T)
 
 forward.test <- predict(object = stepwise.lm, newdata = Validation)
-test <- cbind(Validation$SalePrice, forward.test)
+test <- data.frame(Validation$SalePrice, forward.test)
 test <- test %>% dplyr::mutate(error = Validation.SalePrice - forward.test)
 
 

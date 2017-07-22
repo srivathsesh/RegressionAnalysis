@@ -201,6 +201,11 @@ Source: CRAN
 Version: 1.1.0
 Hash: 60734a419552f14d9c8246307ccb26bd
 
+Package: goftest
+Source: CRAN
+Version: 1.1-1
+Hash: 0be42001f7d9e07801bd73d69a046386
+
 Package: gridExtra
 Source: CRAN
 Version: 2.2.1
