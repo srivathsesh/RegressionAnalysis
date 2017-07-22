@@ -360,22 +360,35 @@ The following model is a result of stepwise variable selection with full model a
  __`r Stpeqn`__
  
 ```{r Stepwise, echo=F,message=F,warning=F,tidy=T}
-
 summary(stepwise.lm)
+#junkmodel
+junk.lm <- lm(SalePrice ~ OverallQual + OverallCond + QualityIndex + GrLivArea + TotalSQFT, data = train)
+coef_Jnk <- round(coef(junk.lm),2)
+signs_Jnk <- ifelse(sign(coef_Jnk)==1,"+","-")
+formula_Jnk <- as.character(formula(junk.lm))[3]
+predictors_Jnk <- unlist(strsplit(formula_Jnk, split = "+",fixed = T))
+Betas_Jnk <- paste(abs(coef_Jnk[2:length(coef_Jnk)]),"*",predictors_Jnk)
+Jnkeqn <- paste("SalePrice = ",paste(coef_Jnk[1],paste(paste(signs_Jnk[2:length(signs_Jnk)], Betas_Jnk),collapse = " ")))
+```
+## 3.7. Junk Model
+
+The attempt here is to verify the intuition of how correlated predictor variables perform. And how they compare to models from automated variable selection. The predictors chosen are OverallQual,OverallCond, QualityIndex, GrLivArea and TotalSQFT. QualityIndex is a linear combination of OverallQual and OverllCond. TotalSQFT is a result of a linear combination of variables that include GrLivArea. Below is the junk model and its fit.
+
+ __`r Jnkeqn`__
+ 
+```{r junkModel, echo=F,message=F,warning=F,tidy=T}
+
+summary(junk.lm)
+
 ```
 
-```{r junkModel, echo=F,message=F,warning=F,tidy=T}
-#junkmodel
-
-junk.lm <- lm(SalePrice ~ OverallQual + OverallCond + QualityIndex + GrLivArea + TotalSQFT, data = train)
-# summary(junk.lm)
-
+```{r VIFs, echo=F,warning=F,message=F,tidy=T}
 # VIF
 
-# sort(car::vif(junk.lm),decreasing = T)
-# sort(car::vif(forward.lm),decreasing = T)
-# sort(car::vif(backward.lm),decreasing = T)
-# sort(car::vif(stepwise.lm),decreasing = T)
+sort(car::vif(junk.lm),decreasing = T)
+sort(car::vif(forward.lm),decreasing = T)
+sort(car::vif(backward.lm),decreasing = T)
+sort(car::vif(stepwise.lm),decreasing = T)
 
 forward.test <- predict(object = stepwise.lm, newdata = Validation)
 test <- data.frame(Validation$SalePrice, forward.test)
