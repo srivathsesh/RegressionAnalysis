@@ -143,6 +143,7 @@ From the eligible samples, `r paste0(trainPercent*100,"%")` of the data is rando
 
 ```{r TrainingSet, echo=F, warning=F, message=F, tidy=T}
 # Get sample frame.
+set.seed(500)
 SampleFrame <- ames %>% 
   dplyr::filter(DropCondition == '99: Eligible Sample') %>% 
   dplyr::select_(.dots = colsofinterest)
@@ -226,7 +227,7 @@ Predictors <- c('LotArea'
 )
 # training set
 #train <- dplyr::sample_n(SampleFrame,size = trainPercent*nrow(SampleFrame), replace = F,set.seed(2000))
-set.seed(200)
+
 train <- subset(SampleFrame , u < 0.7)
 train <- train %>% dplyr::arrange(SID)
 train.Clean <- train %>% dplyr::select(c(Predictors,'SalePrice'))
@@ -422,7 +423,18 @@ knitr::kable(VIFReport,"latex",caption = "VIF - Top 5 my model") %>%
 ```
 
 ## 4. Model Comparison
+
+The four models (Junk, Forward selection, Backward Elimination ans Stepwise regression) are compared below. It is seen that the model equations for Forward Selection, Backward Elimination and Stepwise regression are the same. The automated variable selections have converged to the same model.
+
+
 ```{r ModelComparison, echo=F,warning=F,message=F,tidy=T}
+models <- data.frame(Models = c("Junk","Forward","Backward", "Stepwise"), Equation = c(Jnkeqn,fwdeqn,Bwdeqn,Stpeqn))
+pander::pandoc.table(models, "Model equations",justify = "left",emphasixe.cols = 2)
+```  
+
+Table 10 shows the metrics adjusted R squared, AIC, BIC. MSE and MAE. Table 11 ranks the metrics. We see that the ranks are idetical for every column i.e. rank based on MSE is same as rank based on R squared, AIC, BIC or MAE. This is expected as the "in-sample" MSE, Adjusted R squared, AIC and BIC are dependent on sum of squared residuals (SS Residuals). The in-sample MAE is dependant on raw residuals, which the SS Residuals is inturn dependendant upon.  
+
+```{r ModelComparison2, echo=F,warning=F,message=F,tidy=T}
 junkmetrics <- broom::glance(junk.lm)
 junkmodel <- broom::augment(junk.lm)
 junkmetrics$MAE <- mean(abs(junkmodel$.resid))
@@ -446,16 +458,49 @@ stepwisemetrics$MSE <- mean(stepwisemodel$.resid ^2)
 comparison <- rbind(junkmetrics,forwardmetrics,backwardmetrics,stepwisemetrics)
 comparison$model <- c("Junk", "Forward Selection", "Backward Elimination", "Stepwise")
 comparison <- comparison %>% 
-  dplyr::select(model,adj.r.squared,AIC,BIC,MSE, MAE)
-
-knitr::kable(comparison,caption = "Model comparison")
+  dplyr::select(model,adj.r.squared,AIC,BIC,MSE, MAE) %>% 
+  dplyr::mutate(BIC = round(BIC,2))
+knitr::kable(comparison,caption = "Model comparison",longtable = T)
+Ranktable <- comparison %>% 
+  dplyr::mutate(Rank.adjR = as.numeric(as.factor(-adj.r.squared)), Rank.AIC = as.numeric(as.factor(AIC)), Rank.BIC=as.numeric(as.factor(BIC)), Rank.MSE = as.numeric(as.factor(MSE)), Rank.MAE = as.numeric(as.factor(MAE))) %>% 
+  dplyr::select(model,Rank.adjR, Rank.AIC, Rank.BIC, Rank.MSE, Rank.MAE)
+knitr::kable(Ranktable,caption = "Model Ranks",longtable = T)
 ```
 
-```{r PredictiveAccuracy, echo=F,warning=F,message=F}
-forward.test <- predict(object = stepwise.lm, newdata = Validation)
-test <- data.frame(Validation$SalePrice, forward.test)
-test <- test %>% dplyr::mutate(error = Validation.SalePrice - forward.test)
+## 4. Predictive Accuracy
+Table 12 shows the MAE and MSE of both "in sample" (training dataset) and "out of sample" (validation data set) data. It is seen that the Junk model performs poorly compared to the automated variable selection model (recall that the forward selection, backward elimination and stepwise all converged into the same model) in both in sample and out of sample. The MSE and MAE metrics both convey the same message. The MSE is an inflated measure of the MAE. $$MAE = \frac{\sum_{i=1}^n {|y_i - \hat{y_i}|}}{n}$$ 
+$$MSE = \frac{\sum_{i=1}^n {(y_i - \hat{y_i})^2}}{n}$$
 
+While there is no statistical implication of choosing MAE over MSE or vice versa, MAE is easily understood and in the same units as of the response variable; in this case US dollars, unlike MSE which is square of US dollars. 
+
+It is also seen that the In sample metrics are better than the out of sample metrics in Table 12. When in sample MAE and MSE is much lower than the out sample MAE and MSE, then it is a sign of model being overfitted for the in-sample data or training data. The model was probably over tailored to the in-sample points.
+
+```{r PredictiveAccuracy, echo=F,warning=F,message=F}
+junk.test <- predict(junk.lm,newdata = Validation)
+junktest<- data.frame(Validation$SalePrice, junk.test)
+junktest<- junktest %>% 
+  dplyr::mutate(error = Validation.SalePrice -junk.test)
+
+forward.test <- predict(object = forward.lm, newdata = Validation)
+fwdtest<- data.frame(Validation$SalePrice, forward.test)
+fwdtest<- fwdtest %>% dplyr::mutate(error = Validation.SalePrice - forward.test)
+
+backward.test <- predict(object = backward.lm, newdata = Validation)
+bwdtest<- data.frame(Validation$SalePrice, backward.test)
+bwdtest<- bwdtest %>% dplyr::mutate(error = Validation.SalePrice - backward.test)
+
+stepwise.test <- predict(object = stepwise.lm, newdata = Validation)
+stptest<- data.frame(Validation$SalePrice, stepwise.test)
+stptest<- fwdtest %>% dplyr::mutate(error = Validation.SalePrice - stepwise.test)
+
+PredictCompare <- data.frame(Model = c("Junk", "Forward", "Backward", "Stepwise"), MAE = c(mean(abs(junktest$error)), mean(abs(fwdtest$error)),mean(abs(bwdtest$error)),mean(abs(stptest$error))),MSE = c(mean(junktest$error^2), mean(fwdtest$error^2),mean(bwdtest$error^2),mean(stptest$error^2)))
+
+PredictCompare <- cbind(PredictCompare,comparison$MAE, comparison$MSE)
+PredictCompare <- PredictCompare[,c(1,2,4,3,5)]
+colnames(PredictCompare) <- c("Model", "MAE.Out.of.Sample", "MAE.In.Sample","MSE.Out.of.Sample", "MSE.In.Sample")
+
+knitr::kable(PredictCompare, caption = "Prediction metrics of models",digits = 2) #%>% 
+#   kableExtra::add_header_above(c(" " = 1, "MAE" = 2, "MSE" = 2))
 ```
 
 
