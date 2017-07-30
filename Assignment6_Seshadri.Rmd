@@ -1,0 +1,159 @@
+---
+title: "Assignment 6: Principle Components in Predictive Modeling"
+author: "Sri Seshadri"
+date: "7/27/2017"
+output: 
+  pdf_document:
+   fig_caption: yes
+   
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,tidy.opts=list(width.cutoff=70),tidy=TRUE)
+library(magrittr)
+library(ggplot2)
+```
+
+## 1. Introduction
+
+WRITE UP GOES HERE
+
+## 2. Exploratory analysis
+
+Since there are number of variables in the data, we start by quantifying the associations amongst them by plotting the correlations. The index VV is of interest and it would be useful to plot the correlation of VV with other variables. Figure 1 shows the correlations of VV with other stock indices. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE, fig.align='center',fig.cap= "Correlations with VV", fig.height=3}
+# read data in
+stocks <- read.csv(file = 'stock_portfolio.csv', header = T)
+# format date & sort chronologically
+stocks$Date <- as.Date(stocks$Date,'%d -%b-%y') 
+stocks <- stocks %>% 
+  dplyr::arrange(Date)
+# get log-returns of the data
+logreturns <- function(x) {
+  log(x[-1]/x[-length(x)])
+}
+returns <- purrr::map_df(.x = stocks[,-1], .f = logreturns)
+# compute correlations table
+
+correlations <- as.data.frame(cor(returns))
+
+# get only VV
+library(ggplot2)
+library(forcats)
+VV_cor <- as.data.frame(correlations$VV[-nrow(correlations)])
+colnames(VV_cor) <- "VV"
+rownames(VV_cor) <- rownames(correlations)[-21]
+ggplot(data = VV_cor, mapping = aes(x = fct_reorder(rownames(VV_cor),VV), y = VV)) + geom_col() + coord_flip() + xlab("Stock Index") + ylab("Correlation") 
+#+ ggtitle ("                                       Correlations with VV")
+
+```
+
+### 2.1 Statistical graphic Vs Data visualization
+
+While figure 1 is useful for understanding the VV's correlations with other stock indices, it would be useful to gain insights into how other stock indicies are correlated amongst themselves and how the correlations compare relatively. From figure 2, it can be noted that higher correlations are on the base of the right triangles formed by the matrx diagonal i.e. indices SLB, WFC, XOM and VV are relatively highly correlated with other indices. Such insights are possible only with visualizations such as this.
+
+It can be seen that indices DPS, MPC and PEP are not significantly correlated with other indices. They are likely to have low Variance Inflation Factors (VIF), as mentioned above GS, XOM, SLB and VV are likely to have higher VIF due to their high correlations with other indices.
+
+
+```{r, echo=FALSE, fig.align="center", fig.cap="Correlation plot", fig.height=4}
+corrplot::corrplot(corr = as.matrix(correlations))
+```
+\pagebreak
+
+### 2.2 Variance Inflation Factor (VIF)
+
+In the previous section, it was seen that GS, XOM, and SLB were highly correlated with other predictors and they were suspected to have relatively high VIF. One way of assessing the VIF is to fit regression models and assessing VIF. Two models; an arbitary model and a full model. The VIFs are assesed for the predictor variables in the model and is shown below in table 1. It is seen that variance inflation factors are less than the thumb rule of 10, evidence of multicolinearity not to be a concern. It would be interesting to see how Principle Component Analysis (PCA) would work on this data. 
+
+```{r, echo=FALSE, fig.align="center", fig.height=4}
+library(car)
+# somemodel
+RandomModel <- lm(VV ~ GS+DD+DOW+HON+HUN +JPM + KO + MMM+ XOM, data = returns)
+summary(RandomModel)
+vifrandom <- as.data.frame(sort(car::vif(RandomModel),decreasing = T))
+vifrandom$Model <- "Arbitary model"
+vifrandom$Predictors <- row.names(vifrandom)
+colnames(vifrandom) <- c("VIF", "Model", "Predictors")
+
+# fullmodel
+form <- paste0(colnames(correlations)[-21],collapse = "+")
+fullmodel <- lm(VV~., data = returns)
+summary(fullmodel)
+viffm <- as.data.frame(sort(car::vif(fullmodel), decreasing = T))
+viffm$Model <- "Full Model" 
+viffm$Predictors <- row.names(viffm)
+colnames(viffm) <- c("VIF", "Model","Predictors")
+VIF <- rbind(vifrandom, viffm, row.names = F)
+VIFReport <- VIF[1:nrow(VIF)-1,] %>% dplyr::group_by(Model) %>% 
+  dplyr::top_n(n =5,wt = VIF)
+VIFReport <- VIFReport[,c("Model","Predictors","VIF")]
+knitr::kable(VIFReport, format = "latex",caption = "VIF Full model") %>% 
+  kableExtra::kable_styling(latex_options = "striped") %>% 
+  kableExtra::collapse_rows(columns = 1)
+```
+
+## 3. Principle Component Analysis (PCA)
+
+The tickers from AA through XOM (not including VV) are transformed using PCA. The scatter plot of loadings (loadings are the weights of the variables that contribute to the component - the columns of the loading matrix correspond to eigen vectors) of the first two principle components is shown in Figure 3. It is seen that the tickers belonging to soft drinks industry are grouped together. They also have a  higher weightage in explaining the variation in the data. 
+ANY SURPRISES? 
+It will be interesting to see how PCA reduced the data in terms of variation.
+
+```{r echo=F, fig.cap= "Variable loadings of first 2 principle components"}
+returns.pca <- princomp(returns[,-21], cor = T)
+pc.1 <- returns.pca$loadings[,1]
+pc.2 <- returns.pca$loadings[,2]
+pcs <- data.frame(pc.1,pc.2,names(pc.1))
+colnames(pcs) <- c("PC1","PC2","Index")
+pcs$Industry <- c("Indus Metal"
+                  , "Banking"
+                  , "Oil Field Services"
+                  , "Oil Refining"
+                  , "Industrial Chemical"
+                  , "Industrial Chemical"
+                  , "Soft Drinks"
+                  , "Banking"
+                  , "Oil Field Services"
+                  , "Oil Refining"
+                  , "Manufacturing"
+                  , "Industrial Chemical"
+                  , "Banking"
+                  , "Soft Drinks"
+                  , "Manufacuring"
+                  , "Oil Refining"
+                  ,"Soft Drinks"
+                  , "Oil Field Services"
+                  , "Banking"
+                  , "Oil Refining"
+                  
+                )
+ggplot(data = pcs,mapping = aes(x = PC1,y = PC2,label = Index,color = Industry)) + geom_point() + geom_text(size = 3) + theme_bw() + xlim(c(-0.27,-0.12)) + ylim(c(-0.27,0.6))
+```
+
+### 3.1 Scree plot
+
+Scree plots are useful in identifying the principle components that contribute to explaining the variation in the variables. Figures 4, 5 and 6 show different variations of the scree plot. Figure 4 is the default version of scree plot in R. The scree plot looks to be truncated to 10 components.It is seen that component 1 explains the majority of the variance. 
+
+It would be useful to see the proportion of variance explained by the components. Figure 5 shows the proportion of the variance that the principle components are able to explain. It is seen that the contribution of principle components to explanation of variance plateaus at component number 8. Additional components beyond 8 are not a significant addition to explaining the variance.
+
+Figure 6 shows the first 8 components explain 80% of the total variance in the data. 
+
+```{r Scree, echo=F,warning=F,message=F,fig.cap="Scree Plot - Not so good looking"}
+plot(returns.pca, xlab = "Component Number", main = " ")
+# screeplot(returns.pca)
+```
+
+```{r Scree2, fig.cap="Scree plot - Variance explained "}
+varcontribution <- returns.pca$sdev^2 / sum(returns.pca$sdev^2)
+plot(varcontribution, xlab = "Component Number", ylab = "Variance Contribution", type = "l") 
+  points(varcontribution)
+```
+
+```{r Scree3, fig.cap= "Scree cumulative variance explained"}
+cumvariance <- cumsum(returns.pca$sdev^2) / sum(returns.pca$sdev^2)
+plot(cumvariance, xlab = "Component Number", ylab = "Cumulative Variance", type = "l")
+points(cumvariance)
+abline(h=0.8,lwd = 1.5,col = "red")
+abline(v = 8,lwd = 1.5, col = "red")
+text(13,0.7, 'Keep 8 Principal Components')
+```
+

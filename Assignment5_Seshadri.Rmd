@@ -9,11 +9,14 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F,tidy.opts=list(width.cutoff=60),tidy=TRUE)
+knitr::opts_chunk$set(echo = F,tidy.opts=list(width.cutoff=70),tidy=TRUE)
 ```
 
 ## 1. Introduction
-<span> <style color = 'red'> NEEDS TO BE COMPLETED </style> </span>
+
+In this report, Automated Variable selection Methods (AVM) for modeling sales price of typical homes in Ames Iowa is discussed. The models from automated variable selection methods are compared with a known "junk" model with correlated predictors. It is found that the automated variable selection methods converged to a single model, that is better performing than the known junk model. The converged model from AVM is:
+
+ SalePrice = -261649.86 + 50.32 * TotalSQFT + 1508.63 * QualityIndex + 49044.18 * KEx+ 42.99 * GarageArea + 10329.91 * TotalBath - 41069.62 * Duplex - 12825.83 * Tier4 +15042.46 * PartialSaleCond - 37577.71 * Tier3 + 0.43 * LotArea + 5455.35 * CulDSac +127.75 * YearRemodel - 21364.26 * Twnhs - 55081.8 * Tier1 - 48981.04 * Tier2 - 17106.01 *TwnhsE - 4022.15 * CornerLot - 8585.89 * Frontal2
 
 ```{r Read data, echo=FALSE, message=FALSE, warning=FALSE, tidy=TRUE}
 ames <- readr::read_delim(file = 'ames_housing_data.csv', delim = ",")
@@ -80,6 +83,7 @@ colsofinterest <- c('SID'
 , 'SalePrice')
 
 ```  
+
 
 ### 2.1 Predictor variables of interest for modelling
 
@@ -302,7 +306,7 @@ A simple linear regression model with total square feet as predictor is used as 
 
 
 \begin {center}
-*`r lowereqn`*
+`r lowereqn`
 \end {center}
 
 
@@ -342,7 +346,8 @@ The following model is a result of a backward elimination selection, with full m
 
  __`r Bwdeqn`__
  
- 
+It is seen that the backward elimination selection has converged to the same model as the forward selection variable selection.
+
 ```{r Backward, echo=F,message=F,warning=F,tidy=T}
 summary.lm(backward.lm)
 # stepwise 
@@ -360,7 +365,9 @@ Stpeqn <- paste("SalePrice = ",paste(coef_Stp[1],paste(paste(signs_Stp[2:length(
 The following model is a result of stepwise variable selection with full model and simple linear regression model with Total square feet as a predictor as boundary conditions. 
 
  __`r Stpeqn`__
- 
+
+Like the forward selection and backward elimination methods, the stepwise regression method has converged to the same model.
+
 ```{r Stepwise, echo=F,message=F,warning=F,tidy=T}
 summary(stepwise.lm)
 #junkmodel
@@ -416,7 +423,7 @@ VIF$VIF <- round(VIF$VIF,2)
 VIFReport <- VIF[1:nrow(VIF)-1,] %>% dplyr::group_by(Model) %>% 
   dplyr::top_n(n =5,wt = VIF)
 #colnames(VIF) <- c("Predictor","VIF", "Model")
-knitr::kable(VIFReport,"latex",caption = "VIF - Top 5 my model") %>% 
+knitr::kable(VIFReport,"latex",caption = "VIF - Top 5 by model") %>% 
   kableExtra::kable_styling(latex_options = "striped") %>% 
   kableExtra::collapse_rows(columns = 1)
 
@@ -473,7 +480,7 @@ $$MSE = \frac{\sum_{i=1}^n {(y_i - \hat{y_i})^2}}{n}$$
 
 While there is no statistical implication of choosing MAE over MSE or vice versa, MAE is easily understood and in the same units as of the response variable; in this case US dollars, unlike MSE which is square of US dollars. 
 
-It is also seen that the In sample metrics are better than the out of sample metrics in Table 12. When in sample MAE and MSE is much lower than the out sample MAE and MSE, then it is a sign of model being overfitted for the in-sample data or training data. The model was probably over tailored to the in-sample points.
+It is also seen that the In sample metrics are better than the out of sample metrics in Table 12. When in sample MAE and MSE is much lower than the out sample MAE and MSE, then it is a sign of model being overfitted for the in-sample data or training data. The model was probably over tailored to the in-sample points. However in this case, the in-sample and out of sample MAEs are within $1000.
 
 ```{r PredictiveAccuracy, echo=F,warning=F,message=F}
 junk.test <- predict(junk.lm,newdata = Validation)
@@ -501,6 +508,77 @@ colnames(PredictCompare) <- c("Model", "MAE.Out.of.Sample", "MAE.In.Sample","MSE
 
 knitr::kable(PredictCompare, caption = "Prediction metrics of models",digits = 2) #%>% 
 #   kableExtra::add_header_above(c(" " = 1, "MAE" = 2, "MSE" = 2))
+```
+
+## 5. Operational Validation.
+
+The models are graded to see if they are fit for practical purposes. The MAE of Automated variable selection model (forward/backward/stepwise) is $18,285. While this may be a high for "typical" homes in Ames, it would be useful to see how many instances does the model predict more close closer to the actual sale price. It'd be useful to grade models depending on how close they predict the actual sale price.
+
+If the model predicts sale price of a house within 10% of its actual sale price, then its graded 1. If the prediction is within 15% (>10% and <= 15%), then graded 2; if the prediction is within 25% of the actual sale price then graded 3. If greater than 25%, then graded 4. Table 13 shows the distribution of grades of junk model and forward selection model. Since all the automated variable selection methods converged to one model, we'd compare only the forward model and junk model. 
+
+```{r OperationValidation, echo=F,warning=F,message=F,tidy=T}
+library(purrr)
+library(scales)
+getgrade <- function(x) {
+  ifelse(x <= 0.1, 'Grade 1: [0.0, 0.1]',
+         ifelse(x <= 0.15, 'Grade 2: [0.10,0.15]',
+                ifelse(x <= 0.25, 'Grade 3: [0.15, 0.25]','Grade 4: [0.25 +]')))
+}
+# in sample prediction grade - forward
+forward.error.pct <- abs(forward.lm$residuals)/train.Clean$SalePrice
+forward.predict.grade <- getgrade(forward.error.pct)
+forward.trainTable <- table(forward.predict.grade)
+forward.train.grade <- round(forward.trainTable/sum(forward.trainTable),2)
+# out of sample prediction grade - forward
+fwd.predictError.pct <- abs(fwdtest$error)/fwdtest$Validation.SalePrice
+fwd.predictValid.grade <- getgrade(fwd.predictError.pct)
+forward.testTable <- table(fwd.predictValid.grade)
+forward.test.grade <- round(forward.testTable/sum(forward.testTable),2)
+
+# in sample prediction grade - Junk
+junk.error.pct <- abs(junk.lm$residuals)/train$SalePrice
+junk.predict.grade <- getgrade(junk.error.pct)
+junk.trainTable <- table(junk.predict.grade)
+junk.train.grade <- round(junk.trainTable/sum(junk.trainTable),2)
+
+# out of sample prediction grade - junk
+junk.predictError.pct <- abs(junktest$error)/junktest$Validation.SalePrice
+junk.predictValid.grade <- getgrade(junk.predictError.pct )
+junk.testTable <- table(junk.predictValid.grade)
+junk.test.grade <- round(junk.testTable/sum(junk.testTable),2)
+
+OperationalValidation <- as.data.frame(cbind(forward.train.grade,forward.test.grade,junk.train.grade,junk.test.grade))
+name <- row.names(OperationalValidation)
+OperationalValidation <- map_df(.x = OperationalValidation, .f = percent)
+OperationalValidation$Grade <- name
+OperationalValidation <- OperationalValidation[,c(5,1,2,3,4)]
+
+knitr::kable(OperationalValidation, caption = "Operational Validation")
+
+
+
+```
+
+It is seen that the Automated Variable selection Model (AVM) performs better than the junk model. The model performs at grade 1 over 60% of the instances of prediction. Also from table 12; it is seen that the in-sample and out of sample prediciton MAEs for AVM and junk models  are close within $1000 (out of sample MAE $1000 greater than in sample MAE). The MAE of AVM is better than Junk by approximately $4000. This is consistent with the grading result. 
+
+## 6. Conclusion
+
+It was found that the automated variable selection methods converged to the same model, indicating a much stable model. The choice of preictors played a key role in the stability. Also the performance of the model from automated variable selection was compared with a known junk model with collinear predictors. It was seen that the junk model performed relatively poorly.
+
+The MAE of the automated variable selection model; both in-sample and out of sample were within $1000 dollars of each other. However, the MAE were in the neighborhood of $18,000 dollars, which is more than the desired $10,000. However it is found that the automaterd variable selection model predicts within 10% of the actual sale price over 60% of predition instances. Which makes the model good enough for application.
+
+\pagebreak
+ 
+\appendix
+\begin {center}
+\section {APPENDIX}
+\end {center}
+
+
+## A.1 R code
+
+```{r, ref.label= knitr::all_labels(), echo=TRUE, eval=FALSE, tidy = T}
+
 ```
 
 
