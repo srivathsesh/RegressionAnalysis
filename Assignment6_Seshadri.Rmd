@@ -63,7 +63,7 @@ corrplot::corrplot(corr = as.matrix(correlations))
 
 ### 2.2 Variance Inflation Factor (VIF)
 
-In the previous section, it was seen that GS, XOM, and SLB were highly correlated with other predictors and they were suspected to have relatively high VIF. One way of assessing the VIF is to fit regression models and assessing VIF. Two models; an arbitary model and a full model. The VIFs are assesed for the predictor variables in the model and is shown below in table 1. It is seen that variance inflation factors are less than the thumb rule of 10, evidence of multicolinearity not to be a concern. It would be interesting to see how Principle Component Analysis (PCA) would work on this data. 
+In the previous section, it was seen that GS, XOM, and SLB were highly correlated with other predictors and they were suspected to have relatively high VIF. One way of assessing the VIF is to fit regression models and assessing VIF. Two models; an arbitary model and a full model. The VIFs are assesed for the predictor variables in the model and is shown below in table 1. Table 1 shows the top 5 VIFs for each model. It is seen that variance inflation factors are less than the thumb rule of 10, evidence of multicolinearity not to be a concern. It would be interesting to see how Principle Component Analysis (PCA) would work on this data. 
 
 ```{r, echo=FALSE, fig.align="center", fig.height=4}
 library(car)
@@ -87,7 +87,7 @@ VIF <- rbind(vifrandom, viffm, row.names = F)
 VIFReport <- VIF[1:nrow(VIF)-1,] %>% dplyr::group_by(Model) %>% 
   dplyr::top_n(n =5,wt = VIF)
 VIFReport <- VIFReport[,c("Model","Predictors","VIF")]
-knitr::kable(VIFReport, format = "latex",caption = "VIF Full model") %>% 
+knitr::kable(VIFReport, format = "latex",caption = "Top 5 VIF by model") %>% 
   kableExtra::kable_styling(latex_options = "striped") %>% 
   kableExtra::collapse_rows(columns = 1)
 ```
@@ -163,9 +163,10 @@ With the data reduced to eight principle components, the eight components are to
 
 The scores of the principle components are used as predictors. Score is calculated by multiplying the variable values minus the variable's value by the loading of the variable. 
 
-We will split the scores into training and test sets for modelling. 70% of the data is chosen in random as the training set and the remaining of data is used as validation set. 
+We will split the scores into training and test sets for modelling. 70% of the data is chosen in random as the training set and the remaining of data is used as validation set. Ideally, the principle components' eigenvectors are computed based on the training sample and is used to compute the principle components of the validation or test sample. For simplicity, in this assignment the priciple components are calculated using the entire data set. 
 
 ```{r split}
+set.seed(200)
  returns.scores <- as.data.frame(returns.pca$scores)
  returns.scores$VV <- returns$VV
  returns.scores$u <- runif(n = nrow(returns.scores), min = 0, max = 1)
@@ -175,15 +176,27 @@ We will split the scores into training and test sets for modelling. 70% of the d
  
  df <- cbind(Data = c("Training set", "Validation set","Total"), Samples = c(nrow(train.scores),nrow(test.scores),nrow(train.scores) + nrow(test.scores)))
 knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling")
+
+# Linear Regression with PCA
+pca.lm <- lm(VV ~ Comp.1 + Comp.2 + Comp.3 + Comp.4 + Comp.5 + Comp.6 + Comp.7 + Comp.8, data = returns.scores)
+coef_pca <- round(coef(pca.lm),5)
+signs_pca <- ifelse(sign(coef_pca)==1,"+","-")
+formula_pca <- as.character(formula(pca.lm))[3]
+predictors_pca <- unlist(strsplit(formula_pca, split = "+",fixed = T))
+Betas_pca <- paste(abs(coef_pca[2:length(coef_pca)]),"*", predictors_pca)
+pcaeqn <- paste("VV = ",paste(coef_pca[1],paste(paste(signs_pca[2:length(signs_pca)], Betas_pca),collapse = " ")))
 ```
 
 
-### 3.2.1 Linear Regression
+### 3.2.1 Linear Regression with principle components as predictors
 
-A linear regression model with the 8 principle component scores is fit. The results are summarized below. It is seen that VIF is 1. This is not surprising because the principle components are by design are orthogonal to each other. The eigenvectors are not correlated and orthogonal to each other. 
+A linear regression model with the 8 principle component scores as perdictors is fit. The model and the fit is summarized below. Let us call the model, "PCA model".
+
+__`r pcaeqn`__
+
 
 ```{r Regression}
-pca.lm <- lm(VV ~ Comp.1 + Comp.2 + Comp.3 + Comp.4 + Comp.5 + Comp.6 + Comp.7 + Comp.8, data = returns.scores)
+
 summary(pca.lm)
 vifpc <- as.data.frame(vif(pca.lm))
 vifpc$PC <- row.names(vifpc)
@@ -192,38 +205,117 @@ row.names(vifpc) <- NULL
 knitr::kable(vifpc[,c("PC","VIF")], caption = "VIF of Principle components")
 ```
 
+It is seen that VIF is 1. This is not surprising because the principle components are by design are orthogonal to each other. The eigenvectors are constrained to be orthogonal to each other. 
+
+### 3.2.2. Predictive metric (MAE) for PCA model 
+
+The table below shows the predictive performance of the PCA model. The training and test sample's mean absolute error (MAE) are close.
+
 ```{r MAE}
 pca.lm.MAE <- mean(abs(pca.lm$residuals))
 pca.test <- predict(pca.lm,newdata = test.scores)
 pca.test.MAE <- mean(abs(test.scores$VV - pca.test))
 
-coef_pca <- round(coef(pca.lm),5)
-signs_pca <- ifelse(sign(coef_pca)==1,"+","-")
-formula_pca <- as.character(formula(pca.lm))[3]
-predictors_pca <- unlist(strsplit(formula_pca, split = "+",fixed = T))
-Betas_pca <- paste(abs(coef_pca[2:length(coef_pca)]),"*", predictors_pca)
-pcaeqn <- paste("VV = ",paste(coef_pca[1],paste(paste(signs_pca[2:length(signs_pca)], Betas_pca),collapse = " ")))
+MAEdf <- data.frame(Model = "PCA model", Train.MAE = pca.lm.MAE, Test.MAE = pca.test.MAE)
+knitr::kable(MAEdf, caption = "MAE of PCA model")
+```
 
+## 3.3. Linear regression models with tickers as predictors
+
+It will be interesting to compare the performance of the "PCA model" with linear regression models using raw tickers as the predictors. We will compare the PCA models by fitting an arbitarty model and a full model like the models in section 2.2. To compare the arbitary and full models with PCA model, it would be useful to split the data set into training and validation samples.
+
+```{r}
+set.seed(200)
 returns$u <- runif(nrow(returns), min = 0 , max = 1)
 returns.train <- subset(returns,u >= 0.7)
 returns.test <- subset(returns, u < 0.7)
 df <- cbind(Data = c("Training set", "Validation set","Total"), Samples = c(nrow(returns.train),nrow(returns.test),nrow(returns.train) + nrow(returns.test)))
 knitr::kable(df,align = c("l","r"),caption = "Training and Validation sampling of Raw returns")
-model.1 <- lm(VV~ GS+DD+DOW+HON+HUN +JPM + KO + MMM+ XOM, data = returns.train)
-summary(model.1)
 
+# Arbitary model
+model.1 <- lm(VV~ GS+DD+DOW+HON+HUN +JPM + KO + MMM+ XOM, data = returns.train)
 coef_model.1 <- round(coef(model.1),5)
 signs_model.1 <- ifelse(sign(coef_model.1)==1,"+","-")
 formula_model.1 <- as.character(formula(model.1))[3]
 predictors_model.1 <- unlist(strsplit(formula_model.1, split = "+",fixed = T))
 Betas_model.1 <- paste(abs(coef_model.1[2:length(coef_model.1)]),"*", predictors_model.1)
 model.1eqn <- paste("VV = ",paste(coef_model.1[1],paste(paste(signs_model.1[2:length(signs_model.1)], Betas_model.1),collapse = " ")))
+```
 
+### 3.3.1. Arbitary model
+
+The results for the arbitary model is shown below.
+
+__`r model.1eqn`__
+
+```{r}
+#model.1 <- lm(VV~ GS+DD+DOW+HON+HUN +JPM + KO + MMM+ XOM, data = returns.train)
+summary(model.1)
 model1.train.MAE <- mean(abs(model.1$residuals))
 model1.test <- predict(model.1, newdata = returns.test)
 model1.test.MAE <- mean(abs(model1.test - returns.test$VV))
 
+ArbMAEdf <- data.frame(Model = "Arbitary model", Train.MAE = model1.train.MAE, Test.MAE = model1.test.MAE)
+knitr::kable(ArbMAEdf, caption = "MAE of Arbitary model")
 
+# full model
+model.2 <- lm(VV~ ., data = returns.train)
+coef_model.2 <- round(coef(model.2),5)
+signs_model.2 <- ifelse(sign(coef_model.2)==1,"+","-")
+formula_model.2 <- as.character(formula(model.2))[3]
+predictors_model.2 <- unlist(strsplit(formula_model.2, split = "+",fixed = T))
+Betas_model.2 <- paste(abs(coef_model.2[2:length(coef_model.2)]),"*", predictors_model.2)
+model.2eqn <- paste("VV = ",paste(coef_model.2[1],paste(paste(signs_model.2[2:length(signs_model.2)], Betas_model.2),collapse = " ")))
+```
+
+### 3.3.2 Full model
+
+A full model with all tickers as predictors is fit. The model and the results are shown below.
+
+__`r model.2eqn`__
+
+```{r}
+summary(model.2)
+
+model2.train.MAE <- mean(abs(model.2$residuals))
+model2.test <- predict(model.2, newdata = returns.test)
+model2.test.MAE <- mean(abs(model2.test - returns.test$VV))
+
+FullMAEdf <- data.frame(Model = "Full model", Train.MAE = model2.train.MAE, Test.MAE = model2.test.MAE)
+knitr::kable(FullMAEdf, caption = "MAE of Full model")
+```
+
+### 3.3.3 Model comparison
+
+THe models that have been fit so far is shown in the table below. 
+```{r}
+models <- data.frame(Models = c("PCA","Arbitary","Full"), Equation = c(pcaeqn,model.1eqn,model.2eqn))
+pander::pandoc.table(models, "Model equations",justify = "left",emphasixe.cols = 2)
 
 ```
+
+The predicitve perfromance of the models are compared in table 8. It is seen that from a predictive performance stand point the PCA model is the best model; it has the lowest MAE. Also, from a VIF perspective the PCA model has the lowest VIF possible, which makes the regression coefficients stable. This reflects in the predictive performance, especially when there test sample has minor extrapolation in the predicitve space compared to the training sample.
+
+It is seen that not all principle components' coefficiennts where statistically signifiant, it'll be useful to see how automated variable selection methods choose principle components as predictors. PCA being an unsupervised variable reduction technique, it'll be useful to wrap this technique with supervised (variable selection with response variable) automated variable selection technique. 
+```{r}
+ModelComp <- rbind(MAEdf,ArbMAEdf,FullMAEdf)
+knitr::kable(ModelComp, caption = "Predictive performance of regression models")
+```
+
+## 4. Automated variable selection
+
+```{r}
+full.lm <- lm(VV ~ ., data = train.scores)
+summary(full.lm)
+
+library(MASS)
+backward.lm <- stepAIC(full.lm,direction = c('backward'),trace = F)
+summary(backward.lm)
+vif(backward.lm)
+
+bkward.MAE.train <- mean(abs(backward.lm$residuals))
+bkward.test <- predict(backward.lm,newdata = test.scores)
+bkward.MAE.test <- mean(abs(bkward.test - test.scores$VV))
+```
+
 
