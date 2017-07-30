@@ -16,7 +16,7 @@ library(ggplot2)
 
 ## 1. Introduction
 
-WRITE UP GOES HERE
+This report discusses the analysis of stock portfolio data to predict Vanguard large cap index fund using stock indices of 20 companies from various industries. The choice of Principle Component Analysis (PCA) for selecting predictors for predictive modeling is compared with full model (all twenty indices as predictors), arbitary model (random selection of predictors) and backward elimination methods of selection. The Mean Absolute Error (MAE) is used a criteria for evaluating predictive performance. It is seen that the PCA based approach and backward elimination methods perform well and PCA is a good data reduction technique.  
 
 ## 2. Exploratory analysis
 
@@ -70,6 +70,7 @@ library(car)
 # somemodel
 RandomModel <- lm(VV ~ GS+DD+DOW+HON+HUN +JPM + KO + MMM+ XOM, data = returns)
 summary(RandomModel)
+
 vifrandom <- as.data.frame(sort(car::vif(RandomModel),decreasing = T))
 vifrandom$Model <- "Arbitary model"
 vifrandom$Predictors <- row.names(vifrandom)
@@ -86,6 +87,11 @@ colnames(viffm) <- c("VIF", "Model","Predictors")
 VIF <- rbind(vifrandom, viffm, row.names = F)
 VIFReport <- VIF[1:nrow(VIF)-1,] %>% dplyr::group_by(Model) %>% 
   dplyr::top_n(n =5,wt = VIF)
+
+```
+\break
+
+```{r}
 VIFReport <- VIFReport[,c("Model","Predictors","VIF")]
 knitr::kable(VIFReport, format = "latex",caption = "Top 5 VIF by model") %>% 
   kableExtra::kable_styling(latex_options = "striped") %>% 
@@ -95,7 +101,7 @@ knitr::kable(VIFReport, format = "latex",caption = "Top 5 VIF by model") %>%
 ## 3. Principle Component Analysis (PCA)
 
 The tickers from AA through XOM (not including VV) are transformed using PCA. The scatter plot of loadings (loadings are the weights of the variables that contribute to the component - the columns of the loading matrix correspond to eigen vectors) of the first two principle components is shown in Figure 3. It is seen that the tickers belonging to soft drinks industry are grouped together. They also have a  higher weightage in explaining the variation in the data. 
-ANY SURPRISES? 
+ 
 It will be interesting to see how PCA reduced the data in terms of variation.
 
 ```{r echo=F, fig.cap= "Variable loadings of first 2 principle components"}
@@ -300,22 +306,69 @@ It is seen that not all principle components' coefficiennts where statistically 
 ```{r}
 ModelComp <- rbind(MAEdf,ArbMAEdf,FullMAEdf)
 knitr::kable(ModelComp, caption = "Predictive performance of regression models")
+
+# backward elimination
+full.lm <- lm(VV ~ ., data = train.scores)
+#summary(full.lm)
+
+library(MASS)
+backward.lm <- stepAIC(full.lm,direction = c('backward'),trace = F)
+
+
+coef_backward.lm <- round(coef(backward.lm),5)
+signs_backward.lm <- ifelse(sign(coef_backward.lm)==1,"+","-")
+formula_backward.lm <- as.character(formula(backward.lm))[3]
+predictors_backward.lm <- unlist(strsplit(formula_backward.lm, split = "+",fixed = T))
+Betas_backward.lm <- paste(abs(coef_backward.lm[2:length(coef_backward.lm)]),"*", predictors_backward.lm)
+backward.lmeqn <- paste("VV = ",paste(coef_backward.lm[1],paste(paste(signs_backward.lm[2:length(signs_backward.lm)], Betas_backward.lm),collapse = " ")))
+
 ```
 
 ## 4. Automated variable selection
 
-```{r}
-full.lm <- lm(VV ~ ., data = train.scores)
-summary(full.lm)
+The backward elimination variable selection method is employed to choose predictors from the 20 priciple components. The fit for the backward elimination is shown below.
 
-library(MASS)
-backward.lm <- stepAIC(full.lm,direction = c('backward'),trace = F)
+__`r backward.lmeqn`__
+
+The backward elimination method picked 10 of the 20 principle components compared to the 8 that was picked in the PCA analysis in section 3.1. The backward elimination chose components 9, 10,11,14 and 16 in place of Components 5,6, and 7 in section 3.1. The variance inflation factors reamin at 1 which is not surprising, for reasons mentioned in section 3.2.1. 
+
+```{r}
+
 summary(backward.lm)
 vif(backward.lm)
 
+
+```
+
+### 4.1. Model comparison
+
+The predictive performance of the models fitted are compared below. Though the backward elimination's test MAE is better than the rest, its not by a significant margin. The PCA and the backward elimination models are performing alike. 
+
+
+```{r}
 bkward.MAE.train <- mean(abs(backward.lm$residuals))
 bkward.test <- predict(backward.lm,newdata = test.scores)
 bkward.MAE.test <- mean(abs(bkward.test - test.scores$VV))
+
+BkwardMAEdf <- data.frame(Model = "Backward",Train.MAE = bkward.MAE.train, Test.MAE = bkward.MAE.test)
+ModelComp <- rbind(ModelComp,BkwardMAEdf)
+knitr::kable(ModelComp,caption = "Comparison of regression models")
 ```
 
+## 5. Conclusion
 
+The stock portfolio data was analyzed and predictive models for predicting Vanguard Large Cap index with stocks from twenty companies belonging to various industries as predictors were modelled. Several predictor selection approaches like PCA, full model, arbitary model and backward elimination method were used. The predictive performance of the models were compared. It was found that PCA was a good data reduction technique that reduces the number of variables to key principle components for analysis and modeling. The PCA based model and backward elimination model had comparable predictive performance. They performed better than the arbitary and full model.
+
+\pagebreak
+ 
+\appendix
+\begin {center}
+\section {APPENDIX}
+\end {center}
+
+
+## A.1 R code
+
+```{r, ref.label= knitr::all_labels(), echo=TRUE, eval=FALSE, tidy = T}
+
+```
