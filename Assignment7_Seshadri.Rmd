@@ -1,0 +1,72 @@
+---
+title: 'Assignment7: Factor Analysis'
+author: "Sri Seshadri"
+date: "8/5/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,tidy.opts=list(width.cutoff=60),tidy=TRUE)
+library(magrittr)
+```
+
+## Stotzel's liquor preference paper
+
+There are 1442 survey results on liquor preference
+
+```{r }
+cor.values <- c(1.000,0.210,0.370,-0.32,0.000,-0.31,-0.26,0.090,-0.38, 0.210,1.000,0.090,-0.29,0.120,-0.30,-0.14,0.010,-0.39, 0.370,0.090,1.000,-0.31,-0.04,-0.30,-0.11,0.120,-0.39,
+-0.32,-0.29,-0.31,1.00,-0.16,0.25,-0.13,-0.14,0.900, 0.00,0.120,-0.04,-0.16,1.000,-0.20,-0.03,-0.08,-0.38, -0.31,-0.30,-0.30,0.25,-0.20,1.000,-0.24,-0.16,0.180, -0.26,-0.14,-0.11,-0.13,-0.03,-0.24,1.000,-0.20,0.040, 0.090,0.010,0.120,-0.14,-0.08,-0.16,-0.20,1.000,-0.24, -0.38,-0.39,-0.39,0.900,-0.38,0.180,0.040,-0.24,1.000 )
+
+# Get correlation values into a matrix
+cor.matrix <- matrix(cor.values, nrow= 9, ncol = 9, byrow = T)
+colnames(cor.matrix) <- c("Calvados", "Armagnac","Cognac", "Kirsch", "Marc", "Mirabelle", "Rum", "Whiskey","Liquers")
+rownames(cor.matrix) <- c("Calvados", "Armagnac", "Cognac", "Kirsch", "Marc", "Mirabelle", "Rum", "Whiskey","Liquers")
+cor.matrix
+f.1 <- factanal(covmat = cor.matrix,n.obs = 1442,factors = 3,rotation = "varimax")
+loadingsasdf <- function(x){
+  if(class(x) != "factanal") { stop("input must be of the class factanal")}
+  i <- 1:x$factor
+  df <- as.data.frame(purrr::map(.x = i, .f = function(y) (x$loadings[,y])))
+  colnames(df) <- sapply(i,FUN = function(x){paste0("Factor",x)})
+ df$Names <- row.names(df)
+return(df[,c(x$factor+1,1:x$factor)])
+ 
+}
+
+calculateMAE <- function(x,y = cor.matrix) {
+  loading <- loadingsasdf(x)
+  CorrMatrixHat <- as.matrix(loading[,-1]) %*% t(as.matrix(loading[,-1])) + diag(x$uniquenesses)
+  return(mean(abs(y - CorrMatrixHat)))
+  
+}
+  
+df <- loadingsasdf(f.1) %>%
+  dplyr::arrange(desc(Factor1))
+
+library(ggplot2)
+ggplot(data = df, mapping = aes(x = Factor1, y = Factor2,label = Names,color = Names)) + ggplot2::geom_point() + geom_text(size = 3) + theme_bw() + xlim(c(-1,1)) + ylim(c(-1,1))
+
+# create arguments with number of factors and rotation and put them in a tibble (data frame)
+
+FA.Arguments <-dplyr::tibble(factors = rep(1:5,2),rotation = rep(c("varimax","promax"),1,each = 5))
+# simultaneously run all factanal for all the arguments
+FA <- purrr::map2(.x = FA.Arguments$factors,.y = FA.Arguments$rotation ,.f = function(x,y) factanal(covmat = cor.matrix, n.obs = 1442,factors = x, rotation = y))
+FactorAdequacy <- ifelse(sapply(X = 1:nrow(FA.Arguments), FUN = function(x) FA[[x]]$PVAL) >= 0.05, "yes", "no")
+
+MAEs <- sapply(FA,calculateMAE)
+FactorAdequacy <- cbind(FA.Arguments,FactorAdequacy, MAE = MAEs)
+knitr::kable(FactorAdequacy, caption = "Factor Adequacy & MAE")
+
+
+```
+
+Closing points:
+
+1. The loadings are not hte same as mentioned in the paper ... the loadings do not have a unique solution
+2. Got prety much the same interpretation as Stotzel, but the factors selections based on MLE wasn't sufficient.
+3. Null hypothesis is, the K number of chosen parameters is sufficient for explaining the variation
+4. Oblique roration (promax) has made interpretation easy by making the loadings disappear into one column. i.e. made the loadings bigger in one row of a column than spread them out.
+5. Rotation does not affect the statistical inference for the number of factors
+
+Note: Grouping can be seen using factor scores computation, but due to lack of raw data factor scores were not computed. 
