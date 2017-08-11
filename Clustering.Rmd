@@ -1,0 +1,74 @@
+---
+title: "ClusterAnalysis"
+author: "Sri Seshadri"
+date: "8/9/2017"
+output:
+  html_document: default
+  always_allow_html: yes
+---
+
+```{r setup, include=FALSE, cutoff.width = 70}
+knitr::opts_chunk$set(echo = TRUE)
+measure <- readRDS('measure.RDS')
+library(plotly)
+library(graphics)
+```
+
+## EDA
+
+Since we know what the data is, let's try a 3d plot... colored by gender
+
+```{r measure, warning=FALSE, message=F}
+p <- plotly::plot_ly(data = measure, x = ~chest, y = ~waist, z = ~hips , type = 'scatter3d',mode = 'markers',color = ~gender)
+# Sys.setenv("plotly_username"="srivathsesh")
+# Sys.setenv("plotly_api_key"="0Sr49roqMwTtuQl3JZ9G")
+# api_create(p, filename = "r-clusterAnalysis")
+# knitr::include_graphics('https://plot.ly/~srivathsesh/5.embed')
+p
+```
+
+## Great, now what??
+
+Let's see if we can create the visual clustering mathematically...
+
+Lets start with the eucledian distance. Lets manually create the euclidean distance between first row and the second row
+$$\sqrt{(measure[1,1] -  measure[2,1])^2 + ( measure[1,2] - measure[2,2])^2 + (measure[1,3] - measure[2,3])^2}$$
+`r sqrt((measure[1,1] -  measure[2,1])^2 + ( measure[1,2] - measure[2,2])^2 + (measure[1,3] - measure[2,3])^2)`
+
+
+
+```{r, message=F,warning=F }
+# create a matrix of the euclidean distances
+dm <- dist(measure[1:3], method = "euclidean" )
+single <- hclust(dm,method = "single")
+plot(single,main = "Single")
+Complete <- hclust(dm,method = "complete")
+plot(Complete,main =  "Complete")
+Average <- hclust(dm,method = "average")
+#plot(as.dendrogram(Average),main = "Average",horiz = T)
+plot(Average,main = "Average")
+```
+
+### How do they compare to the principle components ?
+
+```{r}
+pc <- princomp(measure[,1:3],cor = T)
+summary(pc)
+pc2 <- princomp(dm, cor = T)
+summary(pc2)
+measure$pc1 <- pc$scores[,1]
+measure$pc2 <- pc$scores[,2]
+measure$dmpc1 <- pc2$scores[,1]
+measure$dmpc2 <- pc2$scores[,2]
+measure$single <- cutree(single,h = 3.6)
+measure$complete <- cutree(Complete, h = 10)
+measure$avg <- cutree(Average, h = 7.9)
+plot_ly(data = measure,x = ~pc1, y = ~pc2, color = ~gender, type = 'scatter', mode = 'markers',colors = "Set1") %>% 
+  add_text(text = measure$avg, textposition = "top right",showlegend = F) %>% 
+  layout(title = 'PCA using raw data and class labels based on Average')
+
+plot_ly(data = measure,x = ~dmpc1, y = ~dmpc2, color = ~gender, type = 'scatter', mode = 'markers',colors = "Set1") %>% 
+  add_text(text = measure$avg, textposition = "top right",showlegend = F) %>% 
+  layout(title = 'PCA using Eucleadian distances and class labels based on Average')
+```
+

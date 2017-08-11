@@ -286,8 +286,8 @@ Requires: Rcpp, digest
 
 Package: htmlwidgets
 Source: CRAN
-Version: 0.8
-Hash: e7a3c80acddc2412f96d616949e40bb8
+Version: 0.9
+Hash: 7514f6ea9f3bef6d9b6c945095275302
 Requires: htmltools, jsonlite, yaml
 
 Package: httpuv
@@ -448,8 +448,8 @@ Hash: fb19215402e2d9f1c7f803dcaa806fc2
 
 Package: plotly
 Source: CRAN
-Version: 4.7.0
-Hash: 4f41869540fd7fe9ec64a36a97ac8e4c
+Version: 4.7.1
+Hash: 18d2de809bf346363cd4ee7a587d58bf
 Requires: RColorBrewer, base64enc, crosstalk, data.table, digest,
     dplyr, ggplot2, hexbin, htmltools, htmlwidgets, httr, jsonlite,
     lazyeval, magrittr, purrr, scales, tibble, tidyr, viridisLite
