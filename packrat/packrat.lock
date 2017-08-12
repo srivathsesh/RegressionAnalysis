@@ -369,6 +369,11 @@ Version: 0.8
 Hash: 045d7c594d503b41f1c28946d076c8aa
 Requires: mime
 
+Package: mclust
+Source: CRAN
+Version: 5.3
+Hash: 4245dd36974efb35e2df64264e0627b7
+
 Package: mime
 Source: CRAN
 Version: 0.5

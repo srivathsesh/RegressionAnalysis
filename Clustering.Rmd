@@ -71,4 +71,54 @@ plot_ly(data = measure,x = ~dmpc1, y = ~dmpc2, color = ~gender, type = 'scatter'
   add_text(text = measure$avg, textposition = "top right",showlegend = F) %>% 
   layout(title = 'PCA using Eucleadian distances and class labels based on Average')
 ```
+## K-Means Clustering - Textbook example
+
+```{r}
+crime <- readRDS(file = 'crime.rds')
+
+symbol <- rep(20,51)
+symbol[which(crime$Murder > 15)] <- 3
+pairs(crime,pch = symbol)
+```
+The "+" symbol indicates the record for MD... did you see that its an outlier. Lets leave that out data point
+
+```{r}
+crime_subset <- dplyr::filter(crime, rownames(crime) != 'DC')
+rownames(crime_subset) <- rownames(crime[which(rownames(crime) != 'DC'),])
+sapply(crime_subset,'var')
+```
+
+See the variance is different for the different variables? It necessary standardize the variables... Not necessarily scale it. The scaling doesn't matter as we are interested in the distances within each axis (variable... see the euclidean formula above.) 
+
+```{r}
+# Get the ranges for each column
+rge <- sapply(crime_subset, function(x) diff(range(x)))
+crime_s <- sweep(crime_subset,2,rge,FUN = "/")
+rownames(crime_s) <- rownames(crime_subset)
+n <- nrow(crime_s)
+OverallSS <- (n-1) * sum(sapply(crime_s,var))
+
+kmeanscree <- function(data,center) {
+  withinss <- purrr::map(.x = center, .f = function(x) kmeans(data,center =x)$tot.withinss)
+  withinss <- c((nrow(data) - 1) * sum(sapply(data,var)),withinss)
+  plot(x = c(1,center), y = unlist(withinss),xlab = 'Number of clusters',ylab = 'Within cluster Sum of Squares',type = 'b' )
+}
+kmeanscree(data = crime_s,center = 2:6)
+
+```
+
+2 clusters form the elbow of the scree plot. We'll use the 2 clusters for the kmean clustering.
+
+```{r}
+kclust <- kmeans(x = crime_s, centers = 2)
+# converting back to non standardized units
+kclust$center*rge
+# PCA
+pca.crime <- princomp(x = crime_s,cor = F)
+summary(pca.crime)
+# populate df for plotting
+df.pca <- data.frame(pc1 = pca.crime$scores[,1], pc2 = pca.crime$scores[,2],clusters = as.factor(kclust$cluster),Index = rownames(crime_s))
+ggplot(df.pca,mapping = aes(x = pc1, y = pc2, color = clusters,label = Index)) + geom_point() + geom_text(size = 3) + theme_bw()
+```
+
 
