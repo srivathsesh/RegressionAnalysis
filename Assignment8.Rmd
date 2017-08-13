@@ -1,0 +1,197 @@
+---
+title: "Assignment8_Seshadri"
+author: "Sri Seshadri"
+date: "8/12/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=70),tidy=TRUE)
+library(magrittr)
+```
+## Assignment
+In this assignment we will learn how to perform an exploratory data analysis for a clustering problem, fit a hierarchical cluster analysis, fit a k-means cluster analysis, how to integrate principal components analysis and cluster analysis, how to use cluster analysis as a predictive model, and how to make a variety of R graphics applicable to cluster analysis and multivariate analysis in general. 
+
+## Part 1- The data
+Let’s begin by reading in the data.
+
+
+```{r}
+my.data <- read.csv('European_Employment.csv', header = T)
+levels(my.data$Group)
+pairs(my.data[,-2], col = my.data$Group)
+
+```
+
+Appears that FIN vs SER and MAN vs FIN are interesting
+
+## 2D plots
+
+
+
+```{r pressure, echo=FALSE}
+library(ggplot2)
+ggplot(data = my.data, mapping = aes(x = SER, y = FIN, color = Group, label = Country)) + geom_point() + geom_text(show.legend = F) + theme_bw() + xlab("Service") + ylab("Finance")
+
+ggplot(data = my.data, mapping = aes(x = MAN, y = FIN, color = Group, label = Country)) + geom_point() + geom_text(show.legend = F) + theme_bw() + xlab("Manufacturing") + ylab("Finance")
+```
+
+## PCA
+Each row is desogned to add to 100%. So if the data is standardized and scaled, we may lose the property. Hence PCA will be done without standardization.
+```{r}
+pca <- princomp(my.data[,c(-1,-2)], cor = F)
+summary(pca)
+my.data$pc.1 <- pca$score[,1]
+my.data$pc.2 <- pca$score[,2]
+ggplot(data = my.data,mapping = aes(x = pc.1, y = pc.2, color = Group, label = Country)) + geom_point() + geom_text(size = 3,show.legend = F) + theme_light()
+
+```
+
+
+# Hirearchical Clustering analysis
+
+Let the drop the group - "other". And what does the cluster look like when we attempt to reproduce the FIN vs Ser
+
+```{r}
+my.data <- dplyr::as_tibble(my.data)
+subset <- my.data %>% 
+  dplyr::filter(Group != "Other") 
+fin.ser <- hclust(dist(subset[,c('FIN','SER')]),method = "complete")
+plot(fin.ser,labels = subset$Country)
+
+```
+
+```{r}
+class <- cutree(fin.ser,k = 3)
+class2 <- cutree(fin.ser,h = 12) # class 1 & 2 are the same
+subset$clust3 <- class
+tab <- table(subset$Group,subset$clust3)
+tab <- tab[1:3,]
+# t(tab) * (1/apply(tab,FUN = sum, MARGIN = 2))
+# tab
+
+round(t(tab) / colSums(tab),2)
+class6 <- cutree(fin.ser,k=6)
+subset$clust6 <- class6
+tab2 <- table(subset$Group,subset$clust6)
+tab2 <- tab2[1:3,]
+# t(tab) * (1/apply(tab,FUN = sum, MARGIN = 2))
+# tab
+round(t(tab2) / colSums(tab2),2)
+
+
+```
+
+## Lets try a PCA again
+
+```{r}
+pca.out <- princomp(subset[,3:11],cor = F)
+summary(pca.out)
+subset$pc.out.1 <- pca.out$scores[,1]
+subset$pc.out.2 <- pca.out$scores[,2]
+pca.hclust <- hclust(dist(subset[,c('pc.out.1','pc.out.2')]), method = 'complete')
+plot(pca.hclust, labels = subset$Country)
+
+tab3 <- table(subset$Group,cutree(pca.hclust,k = 3))
+round(t(tab3)/colSums(tab3),2)
+tab4 <- table(subset$Group,cutree(pca.hclust,k = 6))
+round(t(tab4)/colSums(tab4),2)
+```
+
+### K means clustering
+
+```{r}
+
+finser <- kmeans(x = subset[,c('FIN','SER')], centers = 3)
+subset$kmeans3 <- finser$cluster
+centers <- as.data.frame(finser$centers)
+ggplot() + geom_point(data = subset, mapping = aes(y = FIN, x = SER, color = Group)) + geom_text(data = subset, mapping = aes(y = FIN, x = SER, color = Group, label = Country ),show.legend = F,size = 3,nudge_x = 0.3,nudge_y = 0.01) +
+  geom_point(data = centers , mapping = aes(y = FIN, x = SER),shape = 23, fill = 'red', size = 5) + geom_text(data = centers , mapping = aes(y = FIN, x = SER, label = rownames(centers)),size = 3) + theme_bw()
+tab5 <- table(subset$Group, subset$kmeans3)
+t(tab5)/colSums(tab5)
+
+
+finser <- kmeans(x = subset[,c('FIN','SER')], centers = 6)
+subset$kmeans6 <- finser$cluster
+centers <- as.data.frame(finser$centers)
+ggplot() + geom_point(data = subset, mapping = aes(y = FIN, x = SER, color = Group)) + geom_text(data = subset, mapping = aes(y = FIN, x = SER, color = Group, label = Country ),show.legend = F,size = 3,nudge_x = 0.3,nudge_y = 0.01) +
+  geom_point(data = centers , mapping = aes(y = FIN, x = SER),shape = 23, fill = 'red', size = 5) + geom_text(data = centers , mapping = aes(y = FIN, x = SER, label = rownames(centers)),size = 3) + theme_bw()
+tab6 <- table(subset$Group, subset$kmeans6)
+t(tab6)/colSums(tab6)
+
+```
+
+
+
+## Hmmmm.... Let's do this on the principal component scores
+
+```{r}
+finser <- kmeans(x = subset[,c('pc.out.1','pc.out.2')], centers = 3)
+subset$kmeans3 <- finser$cluster
+centers <- as.data.frame(finser$centers)
+ggplot() + geom_point(data = subset, mapping = aes(y = pc.out.2, x = pc.out.1, color = Group)) + geom_text(data = subset, mapping = aes(y = pc.out.2, x = pc.out.1, color = Group, label = Country ),show.legend = F,size = 3,nudge_x = 0.3,nudge_y = 0.01) +
+  geom_point(data = centers , mapping = aes(y = pc.out.2, x = pc.out.1),shape = 23, fill = 'red', size = 5) + geom_text(data = centers , mapping = aes(y = pc.out.2, x = pc.out.1, label = rownames(centers)),size = 3) + theme_bw()
+tab5 <- table(subset$Group, subset$kmeans3)
+t(tab5)/colSums(tab5)
+
+finser <- kmeans(x = subset[,c('pc.out.1','pc.out.2')], centers = 6)
+subset$kmeans3 <- finser$cluster
+centers <- as.data.frame(finser$centers)
+ggplot() + geom_point(data = subset, mapping = aes(y = pc.out.2, x = pc.out.1, color = Group)) + geom_text(data = subset, mapping = aes(y = pc.out.2, x = pc.out.1, color = Group, label = Country ),show.legend = F,size = 3,nudge_x = 0.3,nudge_y = 0.01) +
+  geom_point(data = centers , mapping = aes(y = pc.out.2, x = pc.out.1),shape = 23, fill = 'red', size = 5) + geom_text(data = centers , mapping = aes(y = pc.out.2, x = pc.out.1, label = rownames(centers)),size = 3) + theme_bw()
+tab5 <- table(subset$Group, subset$kmeans3)
+t(tab5)/colSums(tab5)
+sum(tab5[1:3,])
+```
+
+
+```{r}
+Accuracy <- function(cluster,data = subset) {
+  # lets get the hierarchical clustering accuracy
+  hclust <- hclust(dist(data[,c("AGR","MIN","MAN","PS","CON","SER","FIN","SPS","TC" )]), method = "complete")
+  data$hiercluster <- cutree(hclust,k = cluster)
+  tab <- table(data$Group,data$hiercluster)
+  hier.Accuracy <- ifelse(cluster == 1,max(tab[1:3,])/sum(tab[1:3,]),sum(apply(tab[1:3,],MARGIN = 2,FUN = max))/sum(colSums(tab[1:3,])))
+  
+  # k means 
+  kclust <- kmeans(data[,c("AGR","MIN","MAN","PS","CON","SER","FIN","SPS","TC" )],centers = cluster)
+  data$kclust <- kclust$cluster
+  tab2 <- table(data$Group, data$kclust)
+  kmean.Accuracy <- ifelse(cluster == 1,max(tab[1:3,])/sum(tab[1:3,]),sum(apply(tab2[1:3,],MARGIN = 2,FUN = max))/sum(colSums(tab2[1:3,])))
+  
+  return(data.frame(cluster = cluster,hier.Accuracy = hier.Accuracy, kmean.Accuracy = kmean.Accuracy))
+}
+
+AccuracyResults <-  purrr::map_df(.x = 1:6,.f = Accuracy)
+ggplot(data = AccuracyResults, mapping = aes(x = cluster)) + geom_line(aes(y = hier.Accuracy, color = 'red') ) + geom_point(aes(y = hier.Accuracy, color = 'red')) + geom_line(aes(y = kmean.Accuracy, color = 'blue') ) + geom_point(aes(y = kmean.Accuracy, color = 'blue') ) + theme_bw() + xlab("# Clusters") + ylab("Accuracy")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
