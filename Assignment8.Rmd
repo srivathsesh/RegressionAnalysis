@@ -163,7 +163,7 @@ Accuracy <- function(cluster,data = subset) {
 }
 
 AccuracyResults <-  purrr::map_df(.x = 1:6,.f = Accuracy)
-ggplot(data = AccuracyResults, mapping = aes(x = cluster)) + geom_line(aes(y = hier.Accuracy, color = 'red') ) + geom_point(aes(y = hier.Accuracy, color = 'red')) + geom_line(aes(y = kmean.Accuracy, color = 'blue') ) + geom_point(aes(y = kmean.Accuracy, color = 'blue') ) + theme_bw() + xlab("# Clusters") + ylab("Accuracy")
+ggplot(data = AccuracyResults, mapping = aes(x = cluster)) + geom_line(aes(y = hier.Accuracy, color = 'red'), show.legend = F ) + geom_point(aes(y = hier.Accuracy, color = 'red'),show.legend = F ) + geom_line(aes(y = kmean.Accuracy, color = 'blue'),show.legend = F) + geom_point(aes(y = kmean.Accuracy, color = 'blue') ,show.legend = F ) + theme_bw() + xlab("# Clusters") + ylab("Accuracy") 
 ```
 
 

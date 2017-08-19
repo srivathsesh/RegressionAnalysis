@@ -1,0 +1,89 @@
+---
+title: "Indicator Variables"
+author: "Sri Seshadri"
+date: "8/17/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE,tidy.opts=list(width.cutoff=70),tidy=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+```
+
+## Montogemery page 262
+
+Attempt is to compare models with indicator variables to that of models that use subset of data that belong to a particular "group" (indicated by the indicator variable)
+
+```{r,tidy=T}
+ToolLife <- readxl::read_xls('./linear_regression_5e_data_sets/Chapter 8/Examples/data-ex-8-1 (Tool Life).xls')
+ggplot(data = ToolLife, mapping = aes(x = `xi1 (rpm)`, y = `yi (hours)`, color = `Tool Type`)) + geom_point() + theme_bw() + geom_smooth(method = "lm", se = F)
+```
+
+## Create indicator variable
+
+Lets denote "Tool" as indicator variable; 0 - indicating tool type "A", 1 - indicating tool type "B"
+
+```{r}
+ToolLife %>% mutate(Tool = ifelse(`Tool Type` == "A", 0 ,1)) -> ToolLife
+```
+
+## Linear regression models
+
+From the scatter plot above, we see that we may need two regression lines to explain the tool life. One passing through the blue points and the other through the red. Now to do that, we'll subset the data by Tool type and fit regression models.
+
+
+### Model fit for tool type A
+
+```{r}
+ToolA <- ToolLife %>% filter(Tool == 0)
+lm.A <- lm(data = ToolA, `yi (hours)` ~ `xi1 (rpm)` )
+summary(lm.A)
+```
+
+## Lets compare the model with tool type B
+
+```{r, warning=F}
+ToolB <- ToolLife %>% filter(Tool == 1)
+lm.B <- lm(data = ToolB, `yi (hours)` ~ `xi1 (rpm)` )
+summary(lm.B)
+lm.B.data <- broom::augment(lm.B)
+
+```
+
+## Lets compare the two models above with model with indicator variable "Tool"
+
+```{r}
+lm.Ind <- lm(data = ToolLife , `yi (hours)` ~ `xi1 (rpm)` + Tool )
+summary(lm.Ind)
+```
+
+## Hmmm let's see if the residuals of lm.A , lm.B and lm.Ind (by tool type) are the same... i.e. are the fitted values same? 
+## Looks like the residuals are not the same!!! Could there be an interaction between Tool type and rpm ??
+
+```{r, tidy=T, fig.cap= 'residuals vs predictor by models', warning=F}
+
+lm.A.res <- c(lm.A$residuals,rep(NA,10))
+lm.B.res <- c(rep(NA,10),lm.B$residuals)
+ToolLife$lm.Ind.res <- lm.Ind$residuals
+
+ToolLife$lm.A.res <- lm.A.res
+ToolLife$lm.B.res <- lm.B.res
+
+Tools_molten <- ToolLife %>% 
+  tidyr::gather(model,res,-i, -`yi (hours)`, -`xi1 (rpm)`, -`Tool Type`, -Tool)
+
+p <- ggplot(data = Tools_molten, mapping = aes(x = `xi1 (rpm)`, y = res, color = `Tool Type`)) + geom_point()
+p + facet_grid(. ~ model)
+
+```
+
+## Lets try the model with interaction between tool type and rpm.
+
+```{r}
+lm.Ind2 <- lm(data = ToolLife , `yi (hours)` ~ `xi1 (rpm)` + Tool + `xi1 (rpm)`*Tool )
+summary(lm.Ind2)
+ToolLife$lm.Ind2.res <- lm.Ind2$residuals
+```
+
